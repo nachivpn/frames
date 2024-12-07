@@ -1,6 +1,6 @@
 open import Relation.Binary.PropositionalEquality using (_≡_)
 
-open import Relation.Binary.PropositionalEquality using (_≡_) renaming (refl to ≡-refl ; sym to ≡-sym ; trans to ≡-trans) 
+open import Relation.Binary.PropositionalEquality using (_≡_) renaming (refl to ≡-refl ; sym to ≡-sym ; trans to ≡-trans)
 open import Data.Product using (Σ ; ∃; _×_; _,_; -,_) renaming (proj₁ to fst; proj₂ to snd)
 
 open import Kripke.IFrame
@@ -10,78 +10,132 @@ module Kripke.CFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) w
 open IFrame IF public
 
 open import Data.List
-open import Data.List.Relation.Binary.Pointwise
+open import Data.List.Relation.Binary.Pointwise as Pointwise
 open import Data.List.Membership.Propositional
 open import Data.List.Relation.Unary.Any
 
+open import Data.List.Relation.Binary.Subset.Propositional renaming (_⊆_ to _≤_)
 variable
-  w w' w'' v v' : W
-  ws ws' ws'' vs vs' : List W
+  w w' w'' u u' v v' : W
+  ws ws' ws'' us us' vs vs' : List W
 
 W⋆ = List W
 
-_⊆⋆_ : W⋆ → W⋆ → Set
-_⊆⋆_ = Pointwise _⊆_
+_⋆⊆⋆_ : W⋆ → W⋆ → Set
+_⋆⊆⋆_ = Pointwise _⊆_
 
-⊆⋆-refl[_] : ∀ ws → ws ⊆⋆ ws
-⊆⋆-refl[ [] ]     = []
-⊆⋆-refl[ x ∷ ws ] = ⊆-refl ∷ ⊆⋆-refl[ ws ]
+⋆⊆⋆-refl[_] : ∀ ws → ws ⋆⊆⋆ ws
+⋆⊆⋆-refl[ [] ]     = []
+⋆⊆⋆-refl[ x ∷ ws ] = ⊆-refl ∷ ⋆⊆⋆-refl[ ws ]
 
-⊆⋆-refl : ws ⊆⋆ ws
-⊆⋆-refl = ⊆⋆-refl[ _ ]
+⋆⊆⋆-refl : ws ⋆⊆⋆ ws
+⋆⊆⋆-refl = ⋆⊆⋆-refl[ _ ]
 
-⊆⋆-trans : ws ⊆⋆ ws' → ws' ⊆⋆ ws'' → ws ⊆⋆ ws''
-⊆⋆-trans [] is'              = is'
-⊆⋆-trans (i ∷ is) (i' ∷ is') = ⊆-trans i i' ∷ ⊆⋆-trans is is'
+⋆⊆⋆-trans : ws ⋆⊆⋆ ws' → ws' ⋆⊆⋆ ws'' → ws ⋆⊆⋆ ws''
+⋆⊆⋆-trans [] is'              = is'
+⋆⊆⋆-trans (i ∷ is) (i' ∷ is') = ⊆-trans i i' ∷ ⋆⊆⋆-trans is is'
 
-_∈⋆ᵣ_ : v' ∈ vs' → vs ⊆⋆ vs' → ∃ λ v  → v ∈ vs × (v ⊆ v')
-(here ≡-refl) ∈⋆ᵣ (i ∷ is) = (-, here ≡-refl , i)
-(there n)     ∈⋆ᵣ (i ∷ is) = let (_ , n' , i' ) = n ∈⋆ᵣ is in (-, there n' , i')
+[_]⋆ : w ⊆ w' → [ w ] ⋆⊆⋆ [ w' ]
+[ i ]⋆ = i ∷ []
 
--- Covering Frame
+∈⋆-refl : w ∈ [ w ]
+∈⋆-refl = here ≡-refl
+
+-- an collection of elements
+-- one `A w` for every `w` in `ws`
+data Collection' (A : W → Set) : W⋆ → Set where
+  []   : Collection' A []
+  _∷_  : A w → Collection' A ws → Collection' A (w ∷ ws)
+
+Collection : W⋆ → (W → Set) → Set
+Collection ws A = Collection' A ws
+
+[_]' : {A : W → Set} → A w → Collection [ w ] A
+[ x ]' = x ∷ []
+
+mapCollection : {A B : W → Set} → (∀ {w} → A w → B w) → Collection ws A → Collection ws B
+mapCollection f [] = []
+mapCollection f (x ∷ xs) = f x ∷ mapCollection f xs
+
+split : {A : W → Set} → Collection (ws ++ us) A → Collection ws A × Collection us A
+split {[]}     ps       = [] , ps
+split {w ∷ ws} (p ∷ ps) = let (qs , rs) = split {ws = ws} ps in (p ∷ qs) , rs
+
+-- Covering Frame on a covering relation `R⋆`
 record CFrame (_R⋆_   : W → W⋆ → Set) : Set₁ where
 
   field
-    factor : w ⊆ w' → w R⋆ vs → ∃ λ vs' → (w' R⋆ vs') × (vs ⊆⋆ vs')
+    factor : w ⊆ w' → w R⋆ vs → ∃ λ vs' → (w' R⋆ vs') × (vs ⋆⊆⋆ vs')
 
   factorW⋆ : (i : w ⊆ w') (r : w R⋆ vs) → W⋆
   factorW⋆ i r = factor i r .fst
-  
-  factorR⋆ : (i : w ⊆ w') (r : w R⋆ vs) → w' R⋆ _
+
+  factorR⋆ : (i : w ⊆ w') (r : w R⋆ vs) → w' R⋆ factorW⋆ i r
   factorR⋆ i r = factor i r .snd .fst
 
-  factor⊆⋆ : (i : w ⊆ w') (r : w R⋆ vs) → vs ⊆⋆ _
-  factor⊆⋆ i r = factor i r .snd .snd
+  factor⋆⊆⋆ : (i : w ⊆ w') (r : w R⋆ vs) → vs ⋆⊆⋆ factorW⋆ i r
+  factor⋆⊆⋆ i r = factor i r .snd .snd
 
-  factorW : (i : w ⊆ w') (r : w R⋆ vs) → ∀ {v'} → (n' : v' ∈ factorW⋆ i r) → W
-  factorW i r n' = fst (n' ∈⋆ᵣ (factor⊆⋆ i r))
-
-  factor∈ : (i : w ⊆ w') (r : w R⋆ vs) → ∀ {v'} → (n' : v' ∈ factorW⋆ i r) → factorW i r n' ∈ vs
-  factor∈ i r n' = fst (snd (n' ∈⋆ᵣ (factor⊆⋆ i r)))
-
-  factor⊆ : (i : w ⊆ w') (r : w R⋆ vs) → ∀ {v'} → (n' : v' ∈ factorW⋆ i r) → factorW i r n' ⊆ v'
-  factor⊆ i r n' = snd (snd (n' ∈⋆ᵣ (factor⊆⋆ i r)))
-  
   field
-    factor-pres-⊆-refl  : 
-      (m : w R⋆ vs) → factor ⊆-refl m ≡ (vs , m , ⊆⋆-refl)
+    factor-pres-⊆-refl  :
+      (m : w R⋆ vs) → factor ⊆-refl m ≡ (vs , m , ⋆⊆⋆-refl)
     factor-pres-⊆-trans : (i : w ⊆ w') (i' : w' ⊆ w'') (m : w R⋆ vs)
-      → factor (⊆-trans i i') m ≡ (-, (factorR⋆ i' (factorR⋆ i m) , (⊆⋆-trans (factor⊆⋆ i m) (factor⊆⋆ i' (factorR⋆ i m))))) 
+      → factor (⊆-trans i i') m ≡ (-, (factorR⋆ i' (factorR⋆ i m) , (⋆⊆⋆-trans (factor⋆⊆⋆ i m) (factor⋆⊆⋆ i' (factorR⋆ i m)))))
+
+  -- think "coverage" of a world
+  K : (w : W) → Set
+  K w = ∃ λ vs → w R⋆ vs
+
+  cod : {w : W} → K w → W⋆
+  cod = fst
+
+  rel : {w : W} → (k : K w) → w R⋆ (cod k)
+  rel = snd
+
+  cods : Collection ws K → W⋆
+  cods []       = []
+  cods (k ∷ ks) = cod k ++ cods ks
+
+  -- generalize?
+  module _ (pasteOnce : ∀ {w us} → (r : w R⋆ us) → (ks : Collection us K) → w R⋆ (cods ks)) where
+
+    paste : (ks : Collection ws K) (qs : Collection (cods ks) K) → Collection ws K
+    paste []              qs = qs
+    paste ((us , r) ∷ ks) qs = let (qs1 , qs2) = split qs in ((-, pasteOnce r qs1)) ∷ paste ks qs2
 
 -- Coverages with various properties
-module _ {_R⋆_   : W → W⋆ → Set} (CF : CFrame _R⋆_) where
+module _ {_R⋆_ : W → W⋆ → Set} (CF : CFrame _R⋆_) where
   open CFrame CF
 
-  -- Coverage
-  record Cov : Set where
+  record Coverage : Set where
     field
-    
+
       -- covering family
-      family    : w R⋆ vs → ∀ {v} → v ∈ vs → w ⊆ v
-      
-      -- stability condition
-      stability : (i : w ⊆ w') → (m : w R⋆ vs) → ∀ {v'} → (n' : v' ∈ factorW⋆ i m)
-        → ⊆-trans i (family (factorR⋆ i m) n') ≡ ⊆-trans (family m (factor∈ i m n')) (factor⊆ i m n')
+      family    : w R⋆ vs → Collection vs (w ⊆_)
+
+      -- TODO: stability condition
+
+  record ReflexiveCFrame : Set where
+    field
+      R⋆-refl             : w R⋆ [ w ]
+      factor-pres-R⋆-refl : (i : w ⊆ w') → factor i R⋆-refl ≡ (-, R⋆-refl , [ i ]⋆)
+
+    R⋆-refl[_] : (w : W) → w R⋆ [ w ] ; R⋆-refl[ w ] = R⋆-refl {w}
+
+  record ReflexiveCoverage (C : Coverage) (RCF : ReflexiveCFrame) : Set where
+    open Coverage C
+    open ReflexiveCFrame RCF
+
+    -- identity condition
+    field
+      family-pres-refl : family R⋆-refl ≡ [ ⊆-refl[ w ] ]'
+
+  record TransitiveCFrame : Set where
+
+    field
+      R⋆-trans : (r : w R⋆ ws) → (ks : Collection ws K) → w R⋆ (cods ks)
+
+      -- TODO: R⋆-trans-assoc, factor-pres-R⋆-trans
 
 --
 -- Special covering frames
@@ -97,10 +151,10 @@ emptyCFrame = record
   ; factor-pres-⊆-trans = λ { i i' none → ≡-refl }
   }
 
-emptyCov : Cov emptyCFrame
+emptyCov : Coverage emptyCFrame
 emptyCov = record
-  { family    = λ { none () }
-  ; stability = λ { i none () }
+  { family        = λ { none → [] }
+--  ; family-stable = ?
   }
 
 data idR⋆ : W → W⋆ → Set where
@@ -113,8 +167,17 @@ idCFrame = record
   ; factor-pres-⊆-trans = λ { i i' id → ≡-refl }
   }
 
-idCov : Cov idCFrame
+idCov : Coverage idCFrame
 idCov = record
-  { family    = λ { id (here ≡-refl) → ⊆-refl }
-  ; stability = λ { i id (here ≡-refl) → ≡-trans (⊆-trans-unit-right i) (≡-sym (⊆-trans-unit-left i)) }
+  { family        = λ { id → [ ⊆-refl ]' }
+--  ; family-stable = ?
   }
+
+idRCFrame : ReflexiveCFrame idCFrame
+idRCFrame = record
+  { R⋆-refl             = id
+  ; factor-pres-R⋆-refl = λ _ → ≡-refl
+  }
+
+idRCov : ReflexiveCoverage idCFrame idCov idRCFrame
+idRCov = record { family-pres-refl = ≡-refl }
