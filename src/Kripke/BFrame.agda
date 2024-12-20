@@ -2,10 +2,15 @@
 
 open import Kripke.IFrame
 
+-- Bimodule frame
 module Kripke.BFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) (_R_ : W → W → Set) where
 
 open IFrame IF public
 open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Data.Product using (∃; _×_; _,_; -,_) renaming (proj₁ to fst; proj₂ to snd)
+
+_⊇_ : W → W → Set
+w' ⊇ w = w ⊆ w'
 
 record BFrame : Set where
 
@@ -27,6 +32,21 @@ record BFrame : Set where
     ∙ᵢ-pres-⊆-refl  : {w v : W} (r : w R v) → r ∙ᵢ ⊆-refl ≡ r
     ᵢ∙-pres-⊆-trans : {w w' w'' v : W} (i : w ⊆ w') (i' : w' ⊆ w'') (r : w R v) → (⊆-trans i i') ᵢ∙ r ≡ i' ᵢ∙ (i ᵢ∙ r)
     ∙ᵢ-pres-⊆-trans : {w v v' v'' : W} (r : w R v'') (i : v' ⊆ v'') (i' : v ⊆ v') → r ∙ᵢ (⊆-trans i' i) ≡ (r ∙ᵢ i) ∙ᵢ i'
+
+  -- Generalises the inclusion condition (R → ⊆) in factorising (diamond) frames
+  record StrongBFrame : Set where
+    field
+      str : {w v : W} → w R v → ∃ λ u → w ⊆ u × u ⊇ v
+
+    strW  : {w v : W} → w R v → W ; strW r = str r .fst
+    str⊆ : {w v : W} → (r : w R v) → w ⊆ strW r ; str⊆ r = str r .snd .fst
+    str⊇ : {w v : W} → (r : w R v) → v ⊆ strW r ; str⊇ r = str r .snd .snd
+
+    field
+      strW-stable-∙ᵢ : {w w' v : W} (i : w ⊆ w') (r : w R v) → strW r ⊆ strW (i ᵢ∙ r)
+      strW-stable-ᵢ∙ : {w v' v : W} (r : w R v') (i : v ⊆ v') → strW (r ∙ᵢ i) ⊆ strW r
+      str-stable-∙ᵢ  : {w w' v : W} (i : w ⊆ w') (r : w R v) → ⊆-trans i (str⊆ (i ᵢ∙ r)) ≡ ⊆-trans (str⊆ r) (strW-stable-∙ᵢ i r)
+      str-stable-ᵢ∙  : {w v' v : W} (r : w R v') (i : v ⊆ v') → ⊆-trans i (str⊇ r) ≡ ⊆-trans (str⊇ (r ∙ᵢ i)) (strW-stable-ᵢ∙ r i)
 
   record ReflexiveBFrame : Set where
     field

@@ -2,7 +2,8 @@
 
 open import Kripke.IFrame 
 
-module Kripke.DFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) (_R_ : W → W → Set) where
+-- Factorising Diamond Frame
+module Kripke.FDFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) (_R_ : W → W → Set) where
 
 open import Relation.Binary.PropositionalEquality using (_≡_)
 open import Data.Product using (∃; _×_; _,_; -,_) renaming (proj₁ to fst; proj₂ to snd)
