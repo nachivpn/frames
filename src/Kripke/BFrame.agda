@@ -33,21 +33,6 @@ record BFrame : Set where
     ᵢ∙-pres-⊆-trans : {w w' w'' v : W} (i : w ⊆ w') (i' : w' ⊆ w'') (r : w R v) → (⊆-trans i i') ᵢ∙ r ≡ i' ᵢ∙ (i ᵢ∙ r)
     ∙ᵢ-pres-⊆-trans : {w v v' v'' : W} (r : w R v'') (i : v' ⊆ v'') (i' : v ⊆ v') → r ∙ᵢ (⊆-trans i' i) ≡ (r ∙ᵢ i) ∙ᵢ i'
 
-  -- Generalises the inclusion condition (R → ⊆) in factorising (diamond) frames
-  record StrongBFrame : Set where
-    field
-      str : {w v : W} → w R v → ∃ λ u → w ⊆ u × u ⊇ v
-
-    strW  : {w v : W} → w R v → W ; strW r = str r .fst
-    str⊆ : {w v : W} → (r : w R v) → w ⊆ strW r ; str⊆ r = str r .snd .fst
-    str⊇ : {w v : W} → (r : w R v) → v ⊆ strW r ; str⊇ r = str r .snd .snd
-
-    field
-      strW-stable-∙ᵢ : {w w' v : W} (i : w ⊆ w') (r : w R v) → strW r ⊆ strW (i ᵢ∙ r)
-      strW-stable-ᵢ∙ : {w v' v : W} (r : w R v') (i : v ⊆ v') → strW (r ∙ᵢ i) ⊆ strW r
-      str-stable-∙ᵢ  : {w w' v : W} (i : w ⊆ w') (r : w R v) → ⊆-trans i (str⊆ (i ᵢ∙ r)) ≡ ⊆-trans (str⊆ r) (strW-stable-∙ᵢ i r)
-      str-stable-ᵢ∙  : {w v' v : W} (r : w R v') (i : v ⊆ v') → ⊆-trans i (str⊇ r) ≡ ⊆-trans (str⊇ (r ∙ᵢ i)) (strW-stable-ᵢ∙ r i)
-
   record ReflexiveBFrame : Set where
     field
       R-refl[_] : (w : W) → w R w
