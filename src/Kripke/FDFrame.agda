@@ -28,7 +28,7 @@ record DFrame : Set where
     factor-pres-⊆-refl  : {w v : W}
       → (m : w R v) → factor ⊆-refl m ≡ (v , m , ⊆-refl)
     factor-pres-⊆-trans : {w w' w'' v : W} → (i : w ⊆ w') (i' : w' ⊆ w'') (m : w R v)
-      → factor (⊆-trans i i') m ≡ (-, (factorR i' (factorR i m) , (⊆-trans (factor⊆ i m) (factor⊆ i' (factorR i m)))))
+      → factor (⊆-trans i i') m ≡ (-, factorR i' (factorR i m) , ⊆-trans (factor⊆ i m) (factor⊆ i' (factorR i m)))
 
 -- Diamond frames with additional properties
 module _ (MF : DFrame) where
@@ -51,7 +51,7 @@ module _ (MF : DFrame) where
     field
       R-trans             : {w w' w'' : W} → w R w' → w' R w'' → w R w''
       factor-pres-R-trans : {w w' u v : W} (i : w ⊆ w') (m : w R v) (m' : v R u)
-        → factor i (R-trans m m') ≡ ((-, ((R-trans (factorR i m) (factorR (factor⊆ i m) m')) , factor⊆ (factor⊆ i m) m')))
+        → factor i (R-trans m m') ≡ (-, R-trans (factorR i m) (factorR (factor⊆ i m) m') , factor⊆ (factor⊆ i m) m')
       R-trans-assoc : {v0 v1 v2 v3 : W} → (r : v0 R v1) (r' : v1 R v2) (r'' : v2 R v3) → R-trans (R-trans r r') r'' ≡ R-trans r (R-trans r' r'')
 
   record SerialDFrame : Set where
@@ -65,7 +65,7 @@ module _ (MF : DFrame) where
     serialR w = R-serial[ w ] .snd
 
     field
-      factor-pres-R-serial : {w w' : W} (i : w ⊆ w') → (factorW i (serialR w) , factorR i (serialR w)) ≡ R-serial[ w' ]
+      factor-pres-R-serial : {w w' : W} (i : w ⊆ w') → (-, factorR i (serialR w)) ≡ R-serial[ w' ]
 
     R-serial : {w v : W} → ∃ λ v → w R v ; R-serial = R-serial[ _ ]
 
