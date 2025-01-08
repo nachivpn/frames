@@ -5,8 +5,10 @@ open import Kripke.IFrame
 -- Factorising Diamond Frame
 module Kripke.FDFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) (_R_ : W → W → Set) where
 
-open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Binary.PropositionalEquality using (_≡_ ; subst) renaming (refl to ≡-refl)
 open import Data.Product using (∃; _×_; _,_; -,_) renaming (proj₁ to fst; proj₂ to snd)
+
+open import PUtil
 
 -- Diamond Frame
 record DFrame : Set where
@@ -30,15 +32,16 @@ record DFrame : Set where
     factor-pres-⊆-trans : {w w' w'' v : W} → (i : w ⊆ w') (i' : w' ⊆ w'') (m : w R v)
       → factor (⊆-trans i i') m ≡ (-, factorR i' (factorR i m) , ⊆-trans (factor⊆ i m) (factor⊆ i' (factorR i m)))
 
--- Diamond frames with additional properties
-module _ (MF : DFrame) where
+-- Definitions of diamond frames with additional properties
+module Definitions (DF : DFrame) where
 
-  open DFrame MF
+  open DFrame DF
 
   record InclusiveDFrame : Set where
     field
       R-to-⊆             : {w v : W} → w R v → w ⊆ v
-      factor-pres-R-to-⊆ : {w w' v : W} → (i : w ⊆ w') → (m : w R v) → (⊆-trans i (R-to-⊆ (factorR i m))) ≡ ⊆-trans (R-to-⊆ m) (factor⊆ i m)
+      -- obs.: this condition says the factorisation square commutes under inclusion (R-to-⊆) 
+      factor-pres-R-to-⊆ : {w w' v : W} → (i : w ⊆ w') (r : w R v) → ⊆-trans i (R-to-⊆ (factorR i r)) ≡ ⊆-trans (R-to-⊆ r) (factor⊆ i r)
 
   record ReflexiveDFrame : Set where
     field
@@ -58,34 +61,38 @@ module _ (MF : DFrame) where
     field
       R-serial[_]  : (w : W) → ∃ λ v → w R v
 
-    serialW : (w : W) → W
-    serialW w = R-serial[ w ] .fst
-
-    serialR : (w : W) → w R (serialW w)
-    serialR w = R-serial[ w ] .snd
+    R-serial : {w : W} → ∃ λ v → w R v ; R-serial {w} = R-serial[ w ]
+    
+    serialW  : (w : W) → W ; serialW w = R-serial[ w ] .fst
+    serialR  : (w : W) → w R (serialW w) ; serialR w = R-serial[ w ] .snd
 
     field
-      factor-pres-R-serial : {w w' : W} (i : w ⊆ w') → (-, factorR i (serialR w)) ≡ R-serial[ w' ]
+      factor-pres-serial' : {w w' : W} (i : w ⊆ w') → (-, factorR i (serialR w)) ≡ R-serial[ w' ]
 
-    R-serial : {w v : W} → ∃ λ v → w R v ; R-serial = R-serial[ _ ]
+    serialW-pres-⊆ : {w w' : W} (i : w ⊆ w') → serialW w ⊆ serialW w'
+    serialW-pres-⊆ {w} {w'} i = subst (_ ⊆_) (Σ-≡,≡←≡ (factor-pres-serial' i) .fst) (factor⊆ i (serialR w))
 
-  record InclusiveReflexiveDFrame (IMF : InclusiveDFrame) (RMF : ReflexiveDFrame) : Set where
-    open InclusiveDFrame IMF
-    open ReflexiveDFrame RMF
+    opaque
+      factor-pres-serial : {w w' : W} (i : w ⊆ w') → factor i (serialR w) ≡ (serialW w' , serialR w' , serialW-pres-⊆ i)
+      factor-pres-serial i = let (p , q) = Σ-≡,≡←≡ (factor-pres-serial' i) in Σ×-≡,≡,≡→≡ (p , q , ≡-refl)
+
+  record InclusiveReflexiveDFrame (IDF : InclusiveDFrame) (RDF : ReflexiveDFrame) : Set where
+    open InclusiveDFrame IDF
+    open ReflexiveDFrame RDF
 
     field
       R-to-⊆-pres-refl  : {w : W} → R-to-⊆ R-refl[ w ] ≡ ⊆-refl
 
-  record InclusiveTransitiveDFrame (IMF : InclusiveDFrame) (TMF : TransitiveDFrame) : Set where
-    open InclusiveDFrame IMF
-    open TransitiveDFrame TMF
+  record InclusiveTransitiveDFrame (IDF : InclusiveDFrame) (TDF : TransitiveDFrame) : Set where
+    open InclusiveDFrame IDF
+    open TransitiveDFrame TDF
 
     field
       R-to-⊆-pres-trans : ∀ {w v u} → (r : w R v) →  (r' : v R u) → R-to-⊆ (R-trans r r') ≡ ⊆-trans (R-to-⊆ r) (R-to-⊆ r')
 
-  record ReflexiveTransitiveDFrame (RMF : ReflexiveDFrame) (TMF : TransitiveDFrame) : Set where
-    open ReflexiveDFrame RMF
-    open TransitiveDFrame TMF
+  record ReflexiveTransitiveDFrame (RDF : ReflexiveDFrame) (TDF : TransitiveDFrame) : Set where
+    open ReflexiveDFrame RDF
+    open TransitiveDFrame TDF
 
     field
       R-refl-unit-right : {w v : W} (r : w R v) → R-trans r R-refl ≡ r
