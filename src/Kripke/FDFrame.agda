@@ -10,6 +10,25 @@ open import Data.Product using (∃; _×_; _,_; -,_) renaming (proj₁ to fst; p
 
 open import PUtil
 
+_R-×_ : W → (W → Set) → Set
+w R-× A = ∃ λ v → w R v × A v
+
+witW : {w : W} {A : W → Set} → w R-× A → W
+witW = fst
+
+witR : {w : W} {A : W → Set} → (r : w R-× A) → w R (witW r)
+witR r = r . snd .fst
+
+-- 'E' for element
+witE : {w : W} {A : W → Set} → (r : w R-× A) → A (witW r)
+witE r = r . snd .snd
+
+_D_ : W → W → Set
+w D v = w R-× (v ⊆_)
+
+wit⊆ : {w v : W} → (r : w D v) → v ⊆ (witW r)
+wit⊆ = witE
+
 -- Diamond Frame
 record DFrame : Set where
 
@@ -20,17 +39,26 @@ record DFrame : Set where
   --
 
   field
-      factor : {w w' v : W} → w ⊆ w' → w R v → ∃ λ v' → w' R v' × v ⊆ v'
+      factor : {w w' v : W} → w ⊆ w' → w R v → w' D v
 
-  factorW : {w w' v : W} → (i : w ⊆ w') (r : w R v) → W       ; factorW  w r = factor w r .fst
-  factorR : {w w' v : W} → (i : w ⊆ w') (r : w R v) → w' R _  ; factorR  w r = factor w r .snd .fst
-  factor⊆ : {w w' v : W} → (i : w ⊆ w') (r : w R v) → v ⊆ _   ; factor⊆ w r = factor w r .snd .snd
+  factorW : {w w' v : W} → (i : w ⊆ w') (r : w R v) → W       ; factorW w r = witW (factor w r)
+  factorR : {w w' v : W} → (i : w ⊆ w') (r : w R v) → w' R _  ; factorR w r = witR (factor w r)
+  factor⊆ : {w w' v : W} → (i : w ⊆ w') (r : w R v) → v ⊆ _   ; factor⊆ w r = wit⊆ (factor w r)
+
+  R-to-D : {w v : W} → w R v → w D v
+  R-to-D r = (-, r , ⊆-refl)
+
+  _∙ᵢ_ : {w v v' : W} → w D v' → v ⊆ v' → w D v
+  d ∙ᵢ i = witW d , witR d , ⊆-trans i (wit⊆ d)
+
+  _ᵢ∙_ : {w w' v : W} → w ⊆ w' → w D v → w' D v
+  i ᵢ∙ d = factor i (witR d) ∙ᵢ (wit⊆ d)
 
   field
     factor-pres-⊆-refl  : {w v : W}
-      → (m : w R v) → factor ⊆-refl m ≡ (v , m , ⊆-refl)
-    factor-pres-⊆-trans : {w w' w'' v : W} → (i : w ⊆ w') (i' : w' ⊆ w'') (m : w R v)
-      → factor (⊆-trans i i') m ≡ (-, factorR i' (factorR i m) , ⊆-trans (factor⊆ i m) (factor⊆ i' (factorR i m)))
+      → (r : w R v) → factor ⊆-refl r ≡ R-to-D r
+    factor-pres-⊆-trans : {w w' w'' v : W} → (i : w ⊆ w') (i' : w' ⊆ w'') (r : w R v)
+      → factor (⊆-trans i i') r ≡ i' ᵢ∙ factor i r
 
 -- Definitions of diamond frames with additional properties
 module Definitions (DF : DFrame) where
@@ -40,7 +68,7 @@ module Definitions (DF : DFrame) where
   record InclusiveDFrame : Set where
     field
       R-to-⊆             : {w v : W} → w R v → w ⊆ v
-      -- obs.: this condition says the factorisation square commutes under inclusion (R-to-⊆) 
+      -- obs.: this condition says the factorisation square commutes under inclusion (R-to-⊆)
       factor-pres-R-to-⊆ : {w w' v : W} → (i : w ⊆ w') (r : w R v) → ⊆-trans i (R-to-⊆ (factorR i r)) ≡ ⊆-trans (R-to-⊆ r) (factor⊆ i r)
 
   record ReflexiveDFrame : Set where
@@ -57,24 +85,12 @@ module Definitions (DF : DFrame) where
         → factor i (R-trans m m') ≡ (-, R-trans (factorR i m) (factorR (factor⊆ i m) m') , factor⊆ (factor⊆ i m) m')
       R-trans-assoc : {v0 v1 v2 v3 : W} → (r : v0 R v1) (r' : v1 R v2) (r'' : v2 R v3) → R-trans (R-trans r r') r'' ≡ R-trans r (R-trans r' r'')
 
-  record SerialDFrame : Set where
+  record PointedDFrame : Set where
     field
-      R-serial[_]  : (w : W) → ∃ λ v → w R v
+      R-point[_]   : (w : W) → w D w
+      factor-pres-point : {w w' : W} (i : w ⊆ w') → i ᵢ∙ R-point[ w ] ≡ R-point[ w' ] ∙ᵢ i
 
-    R-serial : {w : W} → ∃ λ v → w R v ; R-serial {w} = R-serial[ w ]
-    
-    serialW  : (w : W) → W ; serialW w = R-serial[ w ] .fst
-    serialR  : (w : W) → w R (serialW w) ; serialR w = R-serial[ w ] .snd
-
-    field
-      factor-pres-serial' : {w w' : W} (i : w ⊆ w') → (-, factorR i (serialR w)) ≡ R-serial[ w' ]
-
-    serialW-pres-⊆ : {w w' : W} (i : w ⊆ w') → serialW w ⊆ serialW w'
-    serialW-pres-⊆ {w} {w'} i = subst (_ ⊆_) (Σ-≡,≡←≡ (factor-pres-serial' i) .fst) (factor⊆ i (serialR w))
-
-    opaque
-      factor-pres-serial : {w w' : W} (i : w ⊆ w') → factor i (serialR w) ≡ (serialW w' , serialR w' , serialW-pres-⊆ i)
-      factor-pres-serial i = let (p , q) = Σ-≡,≡←≡ (factor-pres-serial' i) in Σ×-≡,≡,≡→≡ (p , q , ≡-refl)
+    R-point : {w : W} → w D w ; R-point {w} = R-point[ w ]
 
   record InclusiveReflexiveDFrame (IDF : InclusiveDFrame) (RDF : ReflexiveDFrame) : Set where
     open InclusiveDFrame IDF
