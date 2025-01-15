@@ -113,3 +113,10 @@ module Definitions (DF : DFrame) where
     field
       R-refl-unit-right : {w v : W} (r : w R v) → R-trans r R-refl ≡ r
       R-refl-unit-left  : {w v : W} (r : w R v) → R-trans R-refl r ≡ r
+
+  record InclusivePointedDFrame (IDF : InclusiveDFrame) (PDF : PointedDFrame) : Set where
+    open InclusiveDFrame IDF
+    open PointedDFrame PDF
+
+    field
+      R-to-⊆-pres-point : {w : W} → R-to-⊆ (witR R-point[ w ]) ≡ wit⊆ R-point[ w ]
