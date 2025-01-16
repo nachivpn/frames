@@ -1,5 +1,7 @@
 {-# OPTIONS --safe --without-K #-}
-open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Binary.PropositionalEquality
+  using (_≡_)
+  renaming (refl to ≡-refl; sym to ≡-sym; trans to ≡-trans)
 
 module Kripke.IFrame where
 
@@ -14,3 +16,6 @@ record IFrame (W : Set) (_⊆_ : W → W → Set) : Set where
 
   ⊆-refl[_] : (w : W) → w ⊆ w
   ⊆-refl[ _ ] = ⊆-refl
+
+  ⊆-trans-unit : {w w' : W} (i : w ⊆ w') → ⊆-trans ⊆-refl i ≡ ⊆-trans i ⊆-refl
+  ⊆-trans-unit i = ≡-trans (⊆-trans-unit-left i) (≡-sym (⊆-trans-unit-right i))
