@@ -88,7 +88,7 @@ module Definitions (DF : DFrame) where
   record PointedDFrame : Set where
     field
       R-point[_]   : (w : W) → w D w
-      factor-pres-point : {w w' : W} (i : w ⊆ w') → i ᵢ∙ R-point[ w ] ≡ R-point[ w' ] ∙ᵢ i
+      factor-pres-R-point : {w w' : W} (i : w ⊆ w') → i ᵢ∙ R-point[ w ] ≡ R-point[ w' ] ∙ᵢ i
 
     R-point : {w : W} → w D w ; R-point {w} = R-point[ w ]
 
@@ -103,9 +103,9 @@ module Definitions (DF : DFrame) where
     d ∙ᵣ r = witR d ᵣ∙ factor (wit⊆ d) r
 
     field
-      factor-pres-join : {w w' u v : W} (i : w ⊆ w') (r : w R v) (r' : v R u)
+      factor-pres-R-join : {w w' u v : W} (i : w ⊆ w') (r : w R v) (r' : v R u)
         → i ᵢ∙ R-join r r' ≡ factor i r ∙ᵣ r'
-      join-assoc       : {w u v x : W} (r : w R u) (r' : u R v) (r'' : v R x)
+      R-join-assoc       : {w u v x : W} (r : w R u) (r' : u R v) (r'' : v R x)
         → (R-join r r') ∙ᵣ r'' ≡ r ᵣ∙ (R-join r' r'')
 
   record InclusiveReflexiveDFrame (IDF : InclusiveDFrame) (RDF : ReflexiveDFrame) : Set where
@@ -135,7 +135,7 @@ module Definitions (DF : DFrame) where
     open PointedDFrame PDF
 
     field
-      R-to-⊆-pres-point : {w : W} → R-to-⊆ (witR R-point[ w ]) ≡ wit⊆ R-point[ w ]
+      R-to-⊆-pres-R-point : {w : W} → R-to-⊆ (witR R-point[ w ]) ≡ wit⊆ R-point[ w ]
 
   record InclusiveJoinableDFrame (IDF : InclusiveDFrame) (JDF : JoinableDFrame) : Set where
     open InclusiveDFrame IDF
