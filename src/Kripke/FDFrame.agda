@@ -106,7 +106,7 @@ module Definitions (DF : DFrame) where
       factor-pres-R-join : {w w' u v : W} (i : w ⊆ w') (r : w R v) (r' : v R u)
         → i ᵢ∙ R-join r r' ≡ factor i r ∙ᵣ r'
       R-join-assoc       : {w u v x : W} (r : w R u) (r' : u R v) (r'' : v R x)
-        → (R-join r r') ∙ᵣ r'' ≡ r ᵣ∙ (R-join r' r'')
+        → r ᵣ∙ (R-join r' r'') ≡ (R-join r r') ∙ᵣ r''
 
   record InclusiveReflexiveDFrame (IDF : InclusiveDFrame) (RDF : ReflexiveDFrame) : Set where
     open InclusiveDFrame IDF
