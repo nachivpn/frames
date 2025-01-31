@@ -157,8 +157,8 @@ module Definitions (DF : DFrame) where
     open TransitiveDFrame TDF
 
     field
-      R-refl-unit-right : {w v : W} (r : w R v) → R-trans r R-refl ≡ r
-      R-refl-unit-left  : {w v : W} (r : w R v) → R-trans R-refl r ≡ r
+      R-trans-unit-right : {w v : W} (r : w R v) → R-trans r R-refl ≡ r
+      R-trans-unit-left  : {w v : W} (r : w R v) → R-trans R-refl r ≡ r
 
   -- Coherence between inclusion and pointedness
   record InclusivePointedDFrame (IDF : InclusiveDFrame) (PDF : PointedDFrame) : Set where
@@ -176,3 +176,12 @@ module Definitions (DF : DFrame) where
     field
       R-to-⊆-pres-join : {w u v : W} (r : w R u) (r' : u R v)
         → R-to-⊆ (witR (R-join r r')) ≡ ⊆-trans (⊆-trans (R-to-⊆ r) (R-to-⊆ r')) (wit⊆ (R-join r r'))
+
+  -- Coherence between pointedness and joinability
+  record MonadicDFrame (PDF : PointedDFrame) (JDF : JoinableDFrame) : Set where
+    open PointedDFrame PDF
+    open JoinableDFrame JDF
+
+    field
+      R-join-unit-left  : {w v : W} (r : w R v) → R-point[ w ] ∙ᵣ r ≡ R-to-D r
+      R-join-unit-right : {w v : W} (r : w R v) → r ᵣ∙ R-point[ v ] ≡ R-to-D r
