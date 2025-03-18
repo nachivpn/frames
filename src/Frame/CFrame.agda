@@ -1,11 +1,7 @@
-open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Frame.IFrame
 
-open import Relation.Binary.PropositionalEquality using (_≡_) renaming (refl to ≡-refl ; sym to ≡-sym ; trans to ≡-trans)
-open import Data.Product using (Σ ; ∃; _×_; _,_; -,_) renaming (proj₁ to fst; proj₂ to snd)
+module Frame.CFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) where
 
-open import Kripke.IFrame
-
-module Kripke.CFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) where
 
 open IFrame IF public
 
@@ -14,7 +10,14 @@ open import Data.List.Relation.Binary.Pointwise as Pointwise
 open import Data.List.Membership.Propositional
 open import Data.List.Relation.Unary.Any
 
-open import Data.List.Relation.Binary.Subset.Propositional renaming (_⊆_ to _≤_)
+open import Data.List.Relation.Binary.Subset.Propositional
+  renaming (_⊆_ to _≤_)
+  
+open import Relation.Binary.PropositionalEquality using (_≡_)
+  renaming (refl to ≡-refl ; sym to ≡-sym ; trans to ≡-trans)
+open import Data.Product using (Σ ; ∃; _×_; _,_; -,_)
+  renaming (proj₁ to fst; proj₂ to snd)
+
 variable
   w w' w'' u u' v v' : W
   ws ws' ws'' us us' vs vs' : List W

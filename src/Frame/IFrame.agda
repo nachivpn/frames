@@ -1,10 +1,11 @@
 {-# OPTIONS --safe --without-K #-}
+
+module Frame.IFrame where
+
 open import Relation.Binary.PropositionalEquality
   using (_≡_)
   renaming (refl to ≡-refl; sym to ≡-sym; trans to ≡-trans)
-
-module Kripke.IFrame where
-
+  
 -- Intuitionistic Frame
 record IFrame (W : Set) (_⊆_ : W → W → Set) : Set where
   field

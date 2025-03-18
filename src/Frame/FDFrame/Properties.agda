@@ -1,9 +1,9 @@
 {-# OPTIONS --safe --without-K #-}
 
-open import Kripke.IFrame
-import Kripke.FDFrame as FDF
+open import Frame.IFrame
+import Frame.FDFrame as FDF
 
-module Kripke.FDFrame.Properties {W : Set} {_⊆_ : W → W → Set} {IF : IFrame W _⊆_} {_R_ : W → W → Set}
+module Frame.FDFrame.Properties {W : Set} {_⊆_ : W → W → Set} {IF : IFrame W _⊆_} {_R_ : W → W → Set}
   (let open FDF IF _R_)
   (DF : DFrame)
   (let open Definitions DF)
@@ -36,7 +36,7 @@ open import PUtil
   → (⊆-trans i i') ᵢ∙ d ≡ i' ᵢ∙ (i ᵢ∙ d)
 ᵢ∙-pres-⊆-trans i i' d rewrite factor-pres-⊆-trans i i' (witR d) = Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ≡-sym (⊆-trans-assoc _ _ _))
 
-open import Kripke.BFrame IF _D_
+open import Frame.BFrame IF _D_
 
 D-is-bimodule : BFrame
 D-is-bimodule = record

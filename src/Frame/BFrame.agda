@@ -1,9 +1,9 @@
 {-# OPTIONS --safe --without-K #-}
 
-open import Kripke.IFrame
+open import Frame.IFrame
 
 -- Bimodule frame
-module Kripke.BFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) (_R_ : W → W → Set) where
+module Frame.BFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) (_R_ : W → W → Set) where
 
 open IFrame IF public
 open import Relation.Binary.PropositionalEquality using (_≡_)
