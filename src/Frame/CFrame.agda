@@ -1,68 +1,22 @@
+{-# OPTIONS --safe --without-K #-}
 open import Frame.IFrame
 
 module Frame.CFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) where
 
-
 open IFrame IF public
+open Collection IF
 
-open import Data.List
-open import Data.List.Relation.Binary.Pointwise as Pointwise
-open import Data.List.Membership.Propositional
-open import Data.List.Relation.Unary.Any
+open import Data.List using ([] ; [_] ; _++_)
 
-open import Data.List.Relation.Binary.Subset.Propositional
-  renaming (_⊆_ to _≤_)
-  
 open import Relation.Binary.PropositionalEquality using (_≡_)
-  renaming (refl to ≡-refl ; sym to ≡-sym ; trans to ≡-trans)
+  renaming (refl to ≡-refl ; sym to ≡-sym ; trans to ≡-trans ; cong to ≡-cong)
 open import Data.Product using (Σ ; ∃; _×_; _,_; -,_)
   renaming (proj₁ to fst; proj₂ to snd)
 
-variable
-  w w' w'' u u' v v' : W
-  ws ws' ws'' us us' vs vs' : List W
-
-W⋆ = List W
-
-_⋆⊆⋆_ : W⋆ → W⋆ → Set
-_⋆⊆⋆_ = Pointwise _⊆_
-
-⋆⊆⋆-refl[_] : ∀ ws → ws ⋆⊆⋆ ws
-⋆⊆⋆-refl[ [] ]     = []
-⋆⊆⋆-refl[ x ∷ ws ] = ⊆-refl ∷ ⋆⊆⋆-refl[ ws ]
-
-⋆⊆⋆-refl : ws ⋆⊆⋆ ws
-⋆⊆⋆-refl = ⋆⊆⋆-refl[ _ ]
-
-⋆⊆⋆-trans : ws ⋆⊆⋆ ws' → ws' ⋆⊆⋆ ws'' → ws ⋆⊆⋆ ws''
-⋆⊆⋆-trans [] is'              = is'
-⋆⊆⋆-trans (i ∷ is) (i' ∷ is') = ⊆-trans i i' ∷ ⋆⊆⋆-trans is is'
-
-[_]⋆ : w ⊆ w' → [ w ] ⋆⊆⋆ [ w' ]
-[ i ]⋆ = i ∷ []
-
-∈⋆-refl : w ∈ [ w ]
-∈⋆-refl = here ≡-refl
-
--- an collection of elements
--- one `A w` for every `w` in `ws`
-data Collection' (A : W → Set) : W⋆ → Set where
-  []   : Collection' A []
-  _∷_  : A w → Collection' A ws → Collection' A (w ∷ ws)
-
-Collection : W⋆ → (W → Set) → Set
-Collection ws A = Collection' A ws
-
-[_]' : {A : W → Set} → A w → Collection [ w ] A
-[ x ]' = x ∷ []
-
-mapCollection : {A B : W → Set} → (∀ {w} → A w → B w) → Collection ws A → Collection ws B
-mapCollection f [] = []
-mapCollection f (x ∷ xs) = f x ∷ mapCollection f xs
-
-split : {A : W → Set} → Collection (ws ++ us) A → Collection ws A × Collection us A
-split {[]}     ps       = [] , ps
-split {w ∷ ws} (p ∷ ps) = let (qs , rs) = split {ws = ws} ps in (p ∷ qs) , rs
+private
+  variable
+    w w' w'' u u' v v' : W
+    ws ws' ws'' us us' vs vs' : W⋆
 
 -- Covering Frame on a covering relation `R⋆`
 record CFrame (_R⋆_   : W → W⋆ → Set) : Set₁ where
@@ -70,9 +24,11 @@ record CFrame (_R⋆_   : W → W⋆ → Set) : Set₁ where
   field
     factor : w ⊆ w' → w R⋆ vs → ∃ λ vs' → (w' R⋆ vs') × (vs ⋆⊆⋆ vs')
 
+  -- worlds witnessing the factorisation
   factorW⋆ : (i : w ⊆ w') (r : w R⋆ vs) → W⋆
   factorW⋆ i r = factor i r .fst
 
+  -- R⋆ witnessing the factorisation
   factorR⋆ : (i : w ⊆ w') (r : w R⋆ vs) → w' R⋆ factorW⋆ i r
   factorR⋆ i r = factor i r .snd .fst
 
@@ -85,26 +41,36 @@ record CFrame (_R⋆_   : W → W⋆ → Set) : Set₁ where
     factor-pres-⊆-trans : (i : w ⊆ w') (i' : w' ⊆ w'') (m : w R⋆ vs)
       → factor (⊆-trans i i') m ≡ (-, (factorR⋆ i' (factorR⋆ i m) , (⋆⊆⋆-trans (factor⋆⊆⋆ i m) (factor⋆⊆⋆ i' (factorR⋆ i m)))))
 
-  -- think "coverage" of a world
+  -- think "coverage" of a world `w`
   K : (w : W) → Set
   K w = ∃ λ vs → w R⋆ vs
 
+  -- `K w` intuitively represents a family of morphisms with domain `w`
+  -- this is later enforced in the definition of `Coverage` by the `family` field
+
+  -- worlds accessible from a coverage of `w`
   cod : {w : W} → K w → W⋆
   cod = fst
 
+  -- paths/morphisms contained in a coverage of `w`
   rel : {w : W} → (k : K w) → w R⋆ (cod k)
   rel = snd
 
-  cods : Collection ws K → W⋆
+  -- worlds accessible from a collection of covers
+  cods : Coll ws K → W⋆
   cods []       = []
   cods (k ∷ ks) = cod k ++ cods ks
 
   -- generalize?
-  module _ (pasteOnce : ∀ {w us} → (r : w R⋆ us) → (ks : Collection us K) → w R⋆ (cods ks)) where
+  module _ (pasteOnce : ∀ {w us} → (r : w R⋆ us) → (ks : Coll us K) → w R⋆ (cods ks)) where
 
-    paste : (ks : Collection ws K) (qs : Collection (cods ks) K) → Collection ws K
-    paste []              qs = qs
-    paste ((us , r) ∷ ks) qs = let (qs1 , qs2) = split qs in ((-, pasteOnce r qs1)) ∷ paste ks qs2
+    paste : (ks : Coll ws K) (qs : Coll (cods ks) K) → Coll ws K
+    paste []              [] = []
+    paste ((us , r) ∷ ks) qs = let (qs1 , qs2) = split qs in (-, pasteOnce r qs1) ∷ paste ks qs2
+
+    -- observe: it should be the case that
+    --   (ks : Coll ws K) (qs : Coll (cods ks) K) → cods (paste ks qs) ≡ cods qs
+    -- but having to rely on this to state coherence laws isn't going to be pretty
 
 -- Coverages with various properties
 module _ {_R⋆_ : W → W⋆ → Set} (CF : CFrame _R⋆_) where
@@ -114,9 +80,12 @@ module _ {_R⋆_ : W → W⋆ → Set} (CF : CFrame _R⋆_) where
     field
 
       -- covering family
-      family    : w R⋆ vs → Collection vs (w ⊆_)
+      family    : w R⋆ vs → Coll vs (w ⊆_)
 
-      -- TODO: stability condition
+    field
+      -- the squares determined by factor commute pointwise
+      stability : (i : w ⊆ w') (r : w R⋆ vs)
+        → i ᵢ∙ (family (factorR⋆ i r)) ≡ (family r) ∙ᵢ⋆ (factor⋆⊆⋆ i r)
 
   record ReflexiveCFrame : Set where
     field
@@ -136,51 +105,6 @@ module _ {_R⋆_ : W → W⋆ → Set} (CF : CFrame _R⋆_) where
   record TransitiveCFrame : Set where
 
     field
-      R⋆-trans : (r : w R⋆ ws) → (ks : Collection ws K) → w R⋆ (cods ks)
+      R⋆-trans : (r : w R⋆ ws) → (ks : Coll ws K) → w R⋆ (cods ks)
 
       -- TODO: R⋆-trans-assoc, factor-pres-R⋆-trans
-
---
--- Special covering frames
---
-
-data emptyR⋆ : W → W⋆ → Set where
-  none : emptyR⋆ w []
-
-emptyCFrame : CFrame emptyR⋆
-emptyCFrame = record
-  { factor              = λ { x none → [] , none , [] }
-  ; factor-pres-⊆-refl  = λ { none → ≡-refl }
-  ; factor-pres-⊆-trans = λ { i i' none → ≡-refl }
-  }
-
-emptyCov : Coverage emptyCFrame
-emptyCov = record
-  { family        = λ { none → [] }
---  ; family-stable = ?
-  }
-
-data idR⋆ : W → W⋆ → Set where
-  id : idR⋆ w [ w ]
-
-idCFrame : CFrame idR⋆
-idCFrame = record
-  { factor              = λ { i id → (-, id , i ∷ [] )}
-  ; factor-pres-⊆-refl  = λ { id → ≡-refl }
-  ; factor-pres-⊆-trans = λ { i i' id → ≡-refl }
-  }
-
-idCov : Coverage idCFrame
-idCov = record
-  { family        = λ { id → [ ⊆-refl ]' }
---  ; family-stable = ?
-  }
-
-idRCFrame : ReflexiveCFrame idCFrame
-idRCFrame = record
-  { R⋆-refl             = id
-  ; factor-pres-R⋆-refl = λ _ → ≡-refl
-  }
-
-idRCov : ReflexiveCoverage idCFrame idCov idRCFrame
-idRCov = record { family-pres-refl = ≡-refl }
