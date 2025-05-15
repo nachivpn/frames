@@ -86,10 +86,10 @@ _≋ₒ_ os os' = ∀ i → os i ≡ os' i
 ≋-subst-⊆ₛ-right {ws = ws} = ≋-subst₂-⊆ₛ ≋-refl[ ws ]
 
 module Core
-  (_⊲_        : {I : Set} → W → Wₛ I → Set)
-  (_≋⊲_       : {I : Set} {w : W} {ws : Wₛ I} → w ⊲ ws → w ⊲ ws → Set)
-  (≋⊲-isequiv : {I : Set} {w : W} {ws : Wₛ I} → IsEquivalence (_≋⊲_ {I} {w} {ws}))
-  (≋-subst-⊲  : {I : Set} {w : W} {ws ws' : Wₛ I} → ws ≋ ws' → w ⊲ ws → w ⊲ ws')
+  (_⊲_             : {I : Set} → W → Wₛ I → Set)
+  (≋-subst-⊲       : {I : Set} {w : W} {ws ws' : Wₛ I} → ws ≋ ws' → w ⊲ ws → w ⊲ ws')
+  (≋-subst-⊲-refl  : {I : Set} {w : W} {ws : Wₛ I} {r : w ⊲ ws} → ≋-subst-⊲ ≋-refl[ ws ] r ≡ r)
+  (≋-subst-⊲-trans : {I : Set} {w : W} {ws ws' ws'' : Wₛ I} {p : ws ≋ ws'} {p' : ws' ≋ ws''} {r : w ⊲ ws} → ≋-subst-⊲ (≋-trans p p') r ≡ ≋-subst-⊲ p' (≋-subst-⊲ p r))
   where
 
   -- hack for defining syntax
@@ -109,7 +109,7 @@ module Core
     -- equivalence of two proofs of convergence
     _≋⇓_ : w ⇓[ I ] vs → w ⇓[ I ] vs → Set
     (xs , r , os) ≋⇓ (xs' , r' , os') =
-      Σ (xs ≋ xs') λ xs≋xs' → (≋-subst-⊲ xs≋xs' r ≋⊲ r') × (≋-subst-⊆ₛ-right xs≋xs' os ≋ₒ os')
+      Σ (xs ≋ xs') λ xs≋xs' → ≋-subst-⊲ xs≋xs' r ≡ r' × (≋-subst-⊆ₛ-right xs≋xs' os ≋ₒ os')
 
   -- Covering Frame on a covering relation `_⊲_`
   record CFrame : Set₁ where
@@ -133,11 +133,11 @@ module Core
     -- functor laws of the factorisation action
     field
       --
-      factor-pres-refl : (r : w ⊲[ I ] vs)
+      factor-⊆-refl : (r : w ⊲[ I ] vs)
         → factor ⊆-refl r ≋⇓ (vs , r , ⊆ₛ-refl[ vs ])
 
       --
-      factor-pres-trans : (o : w ⊆ w') (o' : w' ⊆ w'') (r : w ⊲[ I ] vs)
+      factor-⊆-trans : (o : w ⊆ w') (o' : w' ⊆ w'') (r : w ⊲[ I ] vs)
         → let r' = factor⊲ o r
           in factor (⊆-trans o o') r ≋⇓ (factorWₛ o' r' , factor⊲ o' r' , ⊆ₛ-trans (factor⊆ₛ o r) (factor⊆ₛ o' r'))
 
