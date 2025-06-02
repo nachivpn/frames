@@ -3,7 +3,7 @@ open import Frame.IFrame
 
 module Frame.CFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) where
 
-open IFrame IF public
+open IFrame IF
 
 open import Data.Unit using (⊤)
 open import Function using (const)
@@ -16,130 +16,92 @@ open import Relation.Binary.PropositionalEquality using (_≡_)
 open import Data.Product using (Σ ; ∃; _×_; _,_; -,_ ; uncurry)
   renaming (proj₁ to fst; proj₂ to snd)
 
--- families of worlds, indexed by a type
-Wₛ : Set → Set
-Wₛ I = I → W
-
 private
   variable
     w w' w'' u u' v v' : W
-    I I' : Set
-    ws vs ws' vs' ws'' vs'' : Wₛ I
 
--- lift a relation on worlds to families of worlds
-LiftR : (W → W → Set) → Wₛ I → Wₛ I → Set
-LiftR {I} R ws ws' = ∀ i → R (ws i) (ws' i)
+record KPsh : Set₁ where
+  field
 
--- lift _≡_ on worlds
-_≋_ : Wₛ I → Wₛ I → Set
-_≋_ = LiftR _≡_
+    -- type of covers
+    -- an element `k : K w` is a cover of w
+    K   : W → Set
 
-≋-refl[_] : (ws : Wₛ I) → ws ≋ ws
-≋-refl[ ws ] = λ i → ≡-refl {x = ws i}
+    -- if w ⊆ w', then for `k : K w` there exists a `K w'`
+    wkK : w ⊆ w' → K w → K w'
 
-≋-sym : ws ≋ ws' → ws' ≋ ws
-≋-sym ws≋ws' = λ i → ≡-sym (ws≋ws' i)
-
-≋-trans : ws ≋ ws' → ws' ≋ ws'' → ws ≋ ws''
-≋-trans ws≋ws' ws'≋ws'' = λ i → ≡-trans (ws≋ws' i) (ws'≋ws'' i)
-
-≋-isequiv : IsEquivalence (_≋_ {I})
-≋-isequiv = record { refl = ≋-refl[ _ ] ; sym = ≋-sym ; trans = ≋-trans }
-
-≋-subst₂-LiftR : {R : W → W → Set} → ws ≋ ws' → vs ≋ vs' → LiftR R ws vs → LiftR R ws' vs'
-≋-subst₂-LiftR {R = R} ws≋ws' vs≋vs' r = λ i → ≡-subst₂ R (ws≋ws' i) (vs≋vs' i) (r i)
-
-_⊆ₛ_ : Wₛ I → Wₛ I → Set
-_⊆ₛ_ = LiftR _⊆_
-
-_≋ₒ_ : ws ⊆ₛ ws' → ws ⊆ₛ ws' → Set
-_≋ₒ_ os os' = ∀ i → os i ≡ os' i
-
-≋ₒ-refl[_] : (os : ws ⊆ₛ ws') → os ≋ₒ os
-≋ₒ-refl[ os ] = λ i → ≡-refl {x = os i}
-
-≋ₒ-sym : {os os' : ws ⊆ₛ ws'} → os ≋ₒ os' → os' ≋ₒ os
-≋ₒ-sym os≋os' = λ i → ≡-sym (os≋os' i)
-
-≋ₒ-trans : {os os' os'' : ws ⊆ₛ ws'} → os ≋ₒ os' → os' ≋ₒ os'' → os ≋ₒ os''
-≋ₒ-trans os≋os' os'≋os'' = λ i → ≡-trans (os≋os' i) (os'≋os'' i)
-
-≋ₒ-isequiv : IsEquivalence (_≋ₒ_ {I} {ws} {ws'})
-≋ₒ-isequiv = record { refl = ≋ₒ-refl[ _ ] ; sym = ≋ₒ-sym ; trans = ≋ₒ-trans }
-
-⊆ₛ-refl[_] : (ws : Wₛ I) → ws ⊆ₛ ws
-⊆ₛ-refl[ ws ] = λ i → ⊆-refl[ ws i ]
-
-⊆ₛ-trans : ws ⊆ₛ ws' → ws' ⊆ₛ ws'' → ws ⊆ₛ ws''
-⊆ₛ-trans os os' = λ i → ⊆-trans (os i) (os' i)
-
-⊆ₛ-trans-unit-left : (os : ws ⊆ₛ ws') → ⊆ₛ-trans (⊆ₛ-refl[ ws ]) os ≋ₒ os
-⊆ₛ-trans-unit-left os = λ i → ⊆-trans-unit-left (os i)
-
-⊆ₛ-trans-unit-right : (os : ws ⊆ₛ ws') → ⊆ₛ-trans os (⊆ₛ-refl[ ws' ]) ≋ₒ os
-⊆ₛ-trans-unit-right os = λ i → ⊆-trans-unit-right (os i)
-
-≋-subst₂-⊆ₛ : ws ≋ ws' → vs ≋ vs' → ws ⊆ₛ vs → ws' ⊆ₛ vs'
-≋-subst₂-⊆ₛ = ≋-subst₂-LiftR {R = _⊆_}
-
-≋-subst-⊆ₛ-right : vs ≋ vs' → ws ⊆ₛ vs → ws ⊆ₛ vs'
-≋-subst-⊆ₛ-right {ws = ws} = ≋-subst₂-⊆ₛ ≋-refl[ ws ]
+    -- wkK is functorial
+    wkK-pres-refl  : (k : K w) → wkK ⊆-refl[ w ] k ≡ k
+    wkK-pres-trans : (i : w ⊆ w') (i' : w' ⊆ w'') (k : K w) → wkK (⊆-trans i i') k ≡ wkK i' (wkK i k)
 
 module Core
-  (_⊲_             : {I : Set} → W → Wₛ I → Set)
-  (≋-subst-⊲       : {I : Set} {w : W} {ws ws' : Wₛ I} → ws ≋ ws' → w ⊲ ws → w ⊲ ws')
-  (≋-subst-⊲-refl  : {I : Set} {w : W} {ws : Wₛ I} {r : w ⊲ ws} → ≋-subst-⊲ ≋-refl[ ws ] r ≡ r)
-  (≋-subst-⊲-trans : {I : Set} {w : W} {ws ws' ws'' : Wₛ I} {p : ws ≋ ws'} {p' : ws' ≋ ws''} {r : w ⊲ ws} → ≋-subst-⊲ (≋-trans p p') r ≡ ≋-subst-⊲ p' (≋-subst-⊲ p r))
+  (𝒦 : KPsh)
+  (let open KPsh 𝒦)
+  -- `v ∈ (k : K w)` means v is in the cover k
+  (_∈_ : (v : W) {w : W} → K w → Set)
   where
 
-  -- hack for defining syntax
-  ⊲-syn   = _⊲_
+  -- a predicate is satisfied by all elements of a cover
+  ForAllW : (k : K w) (P : W → Set) → Set
+  ForAllW k P = ∀ {v} → v ∈ k → P v
 
-  syntax ⊲-syn {I} w vs = w ⊲[ I ] vs
+  -- a predicate is satisfied by all proofs witnessing membership of a cover
+  ForAll∈ : (k : K w) (P : ∀ {v} → v ∈ k → Set) → Set
+  ForAll∈ k P = ∀ {v} → (p : v ∈ k) → P p
 
-  -- "converge"
-  ⇓-syn : W → Wₛ I → Set
-  ⇓-syn {I} w' vs = ∃ λ vs' → w' ⊲[ I ] vs' × (vs ⊆ₛ vs')
+  -- inclusion of covers
+  _⊆k_ : K w → K w' → Set
+  k ⊆k k' = ForAllW k' (λ v' → ∃ λ v → v ∈ k × (v ⊆ v'))
 
-  syntax ⇓-syn {I} w vs = w ⇓[ I ] vs
+  -- equality on cover inclusion proofs
+  _≋_ : {k : K w} {k' : K w'} → k ⊆k k' → k ⊆k k' → Set
+  _≋_  {w} {w'} {k} {k'} is is' = ForAll∈ k' λ p → is p ≡ is' p
 
-  -- module to bring these implicit arguments into the body's scope
-  module _ {w : W} {I : Set} {vs : Wₛ I} where
+  --
+  ⊆k-refl[_] : (k : K w) → k ⊆k k
+  ⊆k-refl[ k ] {v} p = v , p , ⊆-refl[ v ]
 
-    -- equivalence of two proofs of convergence
-    _≋⇓_ : w ⇓[ I ] vs → w ⇓[ I ] vs → Set
-    (xs , r , os) ≋⇓ (xs' , r' , os') =
-      Σ (xs ≋ xs') λ xs≋xs' → ≋-subst-⊲ xs≋xs' r ≡ r' × (≋-subst-⊆ₛ-right xs≋xs' os ≋ₒ os')
+  --
+  ⊆k-trans : {k : K w} {k' : K w'} {k'' : K w''}
+    → k ⊆k k' → k' ⊆k k'' → k ⊆k k''
+  ⊆k-trans is is' {v''} p'' = let
+    (v' , p' , i') = is' p''
+    (v , p , i)    = is p'
+    in (v , p , ⊆-trans i i')
 
-  -- Covering Frame on a covering relation `_⊲_`
+  -- TODO: show ⊆k-refl is the left and right unit of ⊆k-trans?
+
+  -- specialized and type-casted ⊆k-refl
+  ⊆k-refl[_]' : (k : K w) → k ⊆k wkK ⊆-refl k
+  ⊆k-refl[ k ]' {v} rewrite wkK-pres-refl k = ⊆k-refl[ k ]
+
+  -- specialized and type-casted ⊆k-trans
+  ⊆k-trans' : {i : w ⊆ w'} {i' : w' ⊆ w''} (k : K w)
+    → k ⊆k wkK i k
+    → wkK i k ⊆k wkK i' (wkK i k)
+    → k ⊆k wkK (⊆-trans i i') k
+  ⊆k-trans' {i = i} {i'} k x y rewrite wkK-pres-trans i i' k = ⊆k-trans x y
+
   record CFrame : Set₁ where
 
-  -- components of the factorisation square
     field
 
-      -- worlds witnessing the factorisation
-      factorWₛ : w ⊆ w' → w ⊲[ I ] vs → Wₛ I
+      factor : (i : w ⊆ w') (k : K w) → k ⊆k wkK i k
 
-      -- ⊲ witnessing the factorisation
-      factor⊲ : (o : w ⊆ w') (r : w ⊲[ I ] vs) → w' ⊲[ I ] factorWₛ o r
+      factor-pres-refl : (k : K w)
+        → factor ⊆-refl k ≋ ⊆k-refl[ k ]'
 
-      -- ⊆ₛ witnessing the factorisation
-      factor⊆ₛ : (o : w ⊆ w') (r : w ⊲[ I ] vs) → vs ⊆ₛ factorWₛ o r
+      factor-pres-trans : (i : w ⊆ w') (i' : w' ⊆ w'') (k : K w)
+        → factor (⊆-trans i i') k ≋ ⊆k-trans' k (factor i k) (factor i' (wkK i k))
 
-    -- factorisation square
-    factor : w ⊆ w' → w ⊲[ I ] vs → w' ⇓[ I ] vs
-    factor o r = factorWₛ o r , factor⊲ o r , factor⊆ₛ o r
+    factorW : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → W
+    factorW o k p = factor o k p .fst
 
-    -- functor laws of the factorisation action
-    field
-      --
-      factor-⊆-refl : (r : w ⊲[ I ] vs)
-        → factor ⊆-refl r ≋⇓ (vs , r , ⊆ₛ-refl[ vs ])
+    factor∈ : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → factor o k p .fst ∈ k
+    factor∈ o k p = factor o k p .snd .fst
 
-      --
-      factor-⊆-trans : (o : w ⊆ w') (o' : w' ⊆ w'') (r : w ⊲[ I ] vs)
-        → let r' = factor⊲ o r
-          in factor (⊆-trans o o') r ≋⇓ (factorWₛ o' r' , factor⊲ o' r' , ⊆ₛ-trans (factor⊆ₛ o r) (factor⊆ₛ o' r'))
+    factor⊆ : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → factor o k p .fst ⊆ v'
+    factor⊆ o k p = factor o k p .snd .snd
 
   module _ (CF : CFrame) where
 
@@ -147,19 +109,16 @@ module Core
 
     record Coverage : Set₁ where
       field
-        -- covering family
-        family : {vs : Wₛ I} → w ⊲[ I ] vs → ∀ i → w ⊆ vs i
+        family : (k : K w) → ForAllW k (w ⊆_)
 
     record Identity : Set where
+
       field
-        -- identity condition
-        ⊲-iden : w ⊲[ ⊤ ] (const w)
+        idK[_]  : ∀ w → K w
+        id∈     : ForAllW (idK[ w ]) λ v → w ≡ v
 
     record Transitivity : Set₁ where
 
       field
-        -- transitivity condition
-        ⊲-trans : {vs : Wₛ I} {Js : I → Set} {vs' : ∀ i → Wₛ (Js i)}
-          → w ⊲[ I ] vs
-          → (∀ i → vs i ⊲[ Js i ] (vs' i))
-          → w ⊲[ Σ I Js ] (uncurry vs')
+        transK : (k : K w) → ForAllW k K → K w
+        trans∈ : (k : K w) (f : ForAllW k K) → ForAll∈ k λ p → ForAllW (f p) (_∈ transK k f)
