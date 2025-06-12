@@ -13,7 +13,7 @@ open import Relation.Binary using (IsEquivalence)
 open import Relation.Binary.PropositionalEquality using (_≡_)
   renaming (refl to ≡-refl ; sym to ≡-sym ; trans to ≡-trans ; cong to ≡-cong
            ; subst to ≡-subst ; subst₂ to ≡-subst₂)
-open import Data.Product using (Σ ; ∃; _×_; _,_; -,_ ; uncurry)
+open import Data.Product using (Σ ; ∃; ∃₂; _×_; _,_; -,_)
   renaming (proj₁ to fst; proj₂ to snd)
 
 private
@@ -111,14 +111,28 @@ module Core
       field
         family : (k : K w) → ForAllW k (w ⊆_)
 
-    record Identity : Set where
+    -- Identity condition
+    record Pointed : Set where
 
       field
-        idK[_]  : ∀ w → K w
-        id∈     : ForAllW (idK[ w ]) λ v → w ≡ v
+        pointK[_] : ∀ w → K w
+        point∈    : ForAllW (pointK[ w ]) λ v → w ≡ v
 
-    record Transitivity : Set₁ where
+    -- Transitivity condition
+    record Joinable : Set₁ where
 
       field
-        transK : (k : K w) → ForAllW k K → K w
-        trans∈ : (k : K w) (f : ForAllW k K) → ForAll∈ k λ p → ForAllW (f p) (_∈ transK k f)
+        joinK : (k : K w) → ForAllW k K → K w
+        join∈ : (k : K w) (f : ForAllW k K) → ForAllW (joinK k f) λ v' → ∃₂ λ v (p : v ∈ k) → v' ∈ f p
+
+    -- Note: Speculative!
+    record CoPointed : Set where
+      field
+        copoint∈ : (k : K w) → w ∈ k
+
+    -- Note: Speculative!
+    record CoJoinable : Set₁ where
+
+      field
+        cojoinK : (k : K w) → v ∈ k → K v
+        cojoin∈ : (k : K w) (p : v ∈ k) → ForAllW (cojoinK k p) (_∈ k)
