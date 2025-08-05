@@ -45,6 +45,9 @@ module Core
   ForAllW : (k : K w) (P : W → Set) → Set
   ForAllW k P = ∀ {v} → v ∈ k → P v
 
+  AllForW : (P : W → Set) (k : K w) → Set
+  AllForW P k = ForAllW k P
+
   -- a predicate is satisfied by all proofs witnessing membership of a cover
   ForAll∈ : (k : K w) (P : ∀ {v} → v ∈ k → Set) → Set
   ForAll∈ k P = ∀ {v} → (p : v ∈ k) → P p
@@ -53,9 +56,13 @@ module Core
   _⊆k_ : K w → K w' → Set
   k ⊆k k' = ForAllW k' (λ v' → ∃ λ v → v ∈ k × (v ⊆ v'))
 
+  --
+  ForAllW≋ : (k : K w) {P : W → Set} → (f : ForAllW k P) (g : ForAllW k P)→  Set
+  ForAllW≋  {w} k f g = ForAll∈ k λ p → f p ≡ g p
+
   -- equality on cover inclusion proofs
   _≋_ : {k : K w} {k' : K w'} → k ⊆k k' → k ⊆k k' → Set
-  _≋_  {w} {w'} {k} {k'} is is' = ForAll∈ k' λ p → is p ≡ is' p
+  _≋_  {w} {w'} {k} {k'} = ForAllW≋ k'
 
   --
   ⊆k-refl[_] : (k : K w) → k ⊆k k
@@ -82,6 +89,9 @@ module Core
     → k ⊆k wkK (⊆-trans i i') k
   ⊆k-trans' {i = i} {i'} k x y rewrite wkK-pres-trans i i' k = ⊆k-trans x y
 
+  strCFamRoot : {k : K w} (i : v ⊆ v') → ForAllW k (v' ⊆_) → ForAllW k (v ⊆_)
+  strCFamRoot i fam p = ⊆-trans i (fam p)
+
   record CFrame : Set₁ where
 
     field
@@ -97,11 +107,14 @@ module Core
     factorW : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → W
     factorW o k p = factor o k p .fst
 
-    factor∈ : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → factor o k p .fst ∈ k
+    factor∈ : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → factorW o k p ∈ k
     factor∈ o k p = factor o k p .snd .fst
 
-    factor⊆ : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → factor o k p .fst ⊆ v'
+    factor⊆ : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → factorW o k p ⊆ v'
     factor⊆ o k p = factor o k p .snd .snd
+
+    wkCFamLeaves : {k : K w} (i : w ⊆ w') → ∀ {v} → ForAllW k (v ⊆_) → ForAllW (wkK i k) (v ⊆_)
+    wkCFamLeaves {k = k} i fam p = ⊆-trans (fam (factor∈ i k p)) (factor⊆ i k p)
 
   module _ (CF : CFrame) where
 
@@ -109,7 +122,13 @@ module Core
 
     record Coverage : Set₁ where
       field
-        family : (k : K w) → ForAllW k (w ⊆_)
+
+        -- a cover of w is a family of (w ⊆_) proofs
+        family        : (k : K w) → ForAllW k (w ⊆_)
+
+        -- factorisation square commutes
+        family-stable : (i : w ⊆ w') (k : K w)
+          → ForAllW≋ (wkK i k) (wkCFamLeaves i (family k)) (strCFamRoot i (family (wkK i k)))
 
     -- Identity condition
     record Pointed : Set where
