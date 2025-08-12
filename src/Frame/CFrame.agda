@@ -16,6 +16,8 @@ open import Relation.Binary.PropositionalEquality using (_≡_)
 open import Data.Product using (Σ ; ∃; ∃₂; _×_; _,_; -,_)
   renaming (proj₁ to fst; proj₂ to snd)
 
+open import PUtil using (Σ×-≡,≡,≡→≡)
+
 private
   variable
     w w' w'' u u' v v' : W
@@ -64,11 +66,9 @@ module Core
   _≋_ : {k : K w} {k' : K w'} → k ⊆k k' → k ⊆k k' → Set
   _≋_  {w} {w'} {k} {k'} = ForAllW≋ k'
 
-  --
   ⊆k-refl[_] : (k : K w) → k ⊆k k
   ⊆k-refl[ k ] {v} p = v , p , ⊆-refl[ v ]
 
-  --
   ⊆k-trans : {k : K w} {k' : K w'} {k'' : K w''}
     → k ⊆k k' → k' ⊆k k'' → k ⊆k k''
   ⊆k-trans is is' {v''} p'' = let
@@ -76,7 +76,24 @@ module Core
     (v , p , i)    = is p'
     in (v , p , ⊆-trans i i')
 
-  -- TODO: show ⊆k-refl is the left and right unit of ⊆k-trans?
+  ⊆k-trans-unit-left : {k : K w} {k' : K w'} (is : k ⊆k k')
+    → ⊆k-trans ⊆k-refl[ k ] is ≋ is
+  ⊆k-trans-unit-left is p = let (_ , _ , i) = is p
+    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-left i)
+
+  ⊆k-trans-unit-right : {k : K w} {k' : K w'} (is : k ⊆k k')
+    → ⊆k-trans is ⊆k-refl[ k' ] ≋ is
+  ⊆k-trans-unit-right is p = let (_ , _ , i) = is p
+    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-right i)
+
+  ⊆k-trans-assoc : {k : K u} {k' : K v} {k'' : K w} {k''' : K w'}
+    → (is : k ⊆k k') (is' : k' ⊆k k'') (is'' : k'' ⊆k k''')
+    → ⊆k-trans (⊆k-trans is is') is'' ≋ ⊆k-trans is (⊆k-trans is' is'')
+  ⊆k-trans-assoc is is' is'' p''' = let
+    (_ , p'' , i'') = is'' p'''
+    (_ , p' , i')   = is' p''
+    (_ , _ , i)     = is p'
+    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-assoc i i' i'')
 
   -- specialized and type-casted ⊆k-refl
   ⊆k-refl[_]' : (k : K w) → k ⊆k wkK ⊆-refl k
