@@ -16,31 +16,22 @@ open import Relation.Binary.PropositionalEquality using (_≡_)
 open import Data.Product using (Σ ; ∃; ∃₂; _×_; _,_; -,_)
   renaming (proj₁ to fst; proj₂ to snd)
 
+open import Function using (id ; _∘_)
+
 open import PUtil using (Σ×-≡,≡,≡→≡)
 
 private
   variable
     w w' w'' u u' v v' : W
 
-record KPsh : Set₁ where
-  field
-
-    -- type of covers
-    -- an element `k : K w` is a cover of w
-    K   : W → Set
-
-    -- if w ⊆ w', then for `k : K w` there exists a `K w'`
-    wkK : w ⊆ w' → K w → K w'
-
-    -- wkK is functorial
-    wkK-pres-refl  : (k : K w) → wkK ⊆-refl[ w ] k ≡ k
-    wkK-pres-trans : (i : w ⊆ w') (i' : w' ⊆ w'') (k : K w) → wkK (⊆-trans i i') k ≡ wkK i' (wkK i k)
-
 module Core
-  (𝒦 : KPsh)
-  (let open KPsh 𝒦)
+  (K   : W → Set)
   -- `v ∈ (k : K w)` means v is in the cover k
   (_∈_ : (v : W) {w : W} → K w → Set)
+  -- wkK is functorial
+  --(wkK : {w w' : W} → w ⊆ w' → K w → K w')
+  --(wkK-pres-refl  : {w : W} (k : K w) → wkK ⊆-refl[ w ] k ≡ k)
+  --(wkK-pres-trans : {w w' w'' : W} (i : w ⊆ w') (i' : w' ⊆ w'') (k : K w) → wkK (⊆-trans i i') k ≡ wkK i' (wkK i k))
   where
 
   -- a predicate is satisfied by all elements of a cover
@@ -63,8 +54,8 @@ module Core
   ForAllW≋  {w} k f g = ForAll∈ k λ p → f p ≡ g p
 
   -- equality on cover inclusion proofs
-  _≋_ : {k : K w} {k' : K w'} → k ⊆k k' → k ⊆k k' → Set
-  _≋_  {w} {w'} {k} {k'} = ForAllW≋ k'
+  _≋[⊆k]_ : {k : K w} {k' : K w'} → k ⊆k k' → k ⊆k k' → Set
+  _≋[⊆k]_  {w} {w'} {k} {k'} = ForAllW≋ k'
 
   ⊆k-refl[_] : (k : K w) → k ⊆k k
   ⊆k-refl[ k ] {v} p = v , p , ⊆-refl[ v ]
@@ -77,61 +68,62 @@ module Core
     in (v , p , ⊆-trans i i')
 
   ⊆k-trans-unit-left : {k : K w} {k' : K w'} (is : k ⊆k k')
-    → ⊆k-trans ⊆k-refl[ k ] is ≋ is
+    → ⊆k-trans ⊆k-refl[ k ] is ≋[⊆k] is
   ⊆k-trans-unit-left is p = let (_ , _ , i) = is p
     in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-left i)
 
   ⊆k-trans-unit-right : {k : K w} {k' : K w'} (is : k ⊆k k')
-    → ⊆k-trans is ⊆k-refl[ k' ] ≋ is
+    → ⊆k-trans is ⊆k-refl[ k' ] ≋[⊆k] is
   ⊆k-trans-unit-right is p = let (_ , _ , i) = is p
     in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-right i)
 
   ⊆k-trans-assoc : {k : K u} {k' : K v} {k'' : K w} {k''' : K w'}
     → (is : k ⊆k k') (is' : k' ⊆k k'') (is'' : k'' ⊆k k''')
-    → ⊆k-trans (⊆k-trans is is') is'' ≋ ⊆k-trans is (⊆k-trans is' is'')
+    → ⊆k-trans (⊆k-trans is is') is'' ≋[⊆k] ⊆k-trans is (⊆k-trans is' is'')
   ⊆k-trans-assoc is is' is'' p''' = let
     (_ , p'' , i'') = is'' p'''
     (_ , p' , i')   = is' p''
     (_ , _ , i)     = is p'
     in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-assoc i i' i'')
 
-  -- specialized and type-casted ⊆k-refl
-  ⊆k-refl[_]' : (k : K w) → k ⊆k wkK ⊆-refl k
-  ⊆k-refl[ k ]' {v} rewrite wkK-pres-refl k = ⊆k-refl[ k ]
+  _⇒k_ : W → W → Set
+  w ⇒k v = Σ (K w → K v) λ f → (k : K w) → k ⊆k f k
 
-  -- specialized and type-casted ⊆k-trans
-  ⊆k-trans' : {i : w ⊆ w'} {i' : w' ⊆ w''} (k : K w)
-    → k ⊆k wkK i k
-    → wkK i k ⊆k wkK i' (wkK i k)
-    → k ⊆k wkK (⊆-trans i i') k
-  ⊆k-trans' {i = i} {i'} k x y rewrite wkK-pres-trans i i' k = ⊆k-trans x y
+  _k$_ : (w ⇒k w') → K w → K w'
+  _k$_ = fst
 
-  strCFamRoot : {k : K w} (i : v ⊆ v') → ForAllW k (v' ⊆_) → ForAllW k (v ⊆_)
-  strCFamRoot i fam p = ⊆-trans i (fam p)
+  ⇒k-refl[_] : ∀ w → w ⇒k w
+  ⇒k-refl[ _ ] = id , ⊆k-refl[_]
 
+  ⇒k-trans : w ⇒k w' → w' ⇒k w'' → w ⇒k w''
+  ⇒k-trans (f , p) (g , q) = g ∘ f , λ k → ⊆k-trans (p k) (q _)
+
+  _≋[⇒k]_ : w ⇒k w' → w ⇒k w' → Set
+  (f , p) ≋[⇒k] (g , q) = ∀ k → Σ (f k ≡ g k) λ fk≡gk → ≡-subst (k ⊆k_) fk≡gk (p k) ≋[⊆k] q k
+
+  ⇒k-trans-unit-left : (h : w ⇒k w') → ⇒k-trans ⇒k-refl[ w ] h ≋[⇒k] h
+  ⇒k-trans-unit-left (f , p) k = ≡-refl , ⊆k-trans-unit-left (p k)
+
+  ⇒k-trans-unit-right : (h : w ⇒k w') → ⇒k-trans h ⇒k-refl[ w' ] ≋[⇒k] h
+  ⇒k-trans-unit-right (f , p) k = ≡-refl , ⊆k-trans-unit-right (p k)
+
+  strCFamRoot : (k : K w) (i : v ⊆ v') → ForAllW k (v' ⊆_) → ForAllW k (v ⊆_)
+  strCFamRoot k i fam p = ⊆-trans i (fam p)
+
+  wkCFamLeaves : (k : K w) (h : w ⇒k w') → ForAllW k (w ⊆_) → ForAllW (h k$ k) (w ⊆_)
+  wkCFamLeaves k (g , p) f = λ x → let (_ , y , i) = p k x in ⊆-trans (f y) i
+  
   record CFrame : Set₁ where
 
     field
 
-      factor : (i : w ⊆ w') (k : K w) → k ⊆k wkK i k
+      factor : {w w' : W} → w ⊆ w' → w ⇒k w'
 
-      factor-pres-refl : (k : K w)
-        → factor ⊆-refl k ≋ ⊆k-refl[ k ]'
+      factor-pres-refl : {w : W}
+        → factor ⊆-refl ≋[⇒k] ⇒k-refl[ w ]
 
-      factor-pres-trans : (i : w ⊆ w') (i' : w' ⊆ w'') (k : K w)
-        → factor (⊆-trans i i') k ≋ ⊆k-trans' k (factor i k) (factor i' (wkK i k))
-
-    factorW : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → W
-    factorW o k p = factor o k p .fst
-
-    factor∈ : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → factorW o k p ∈ k
-    factor∈ o k p = factor o k p .snd .fst
-
-    factor⊆ : (o : w ⊆ w') (k : K w) → ∀ {v'} → (p : v' ∈ wkK o k) → factorW o k p ⊆ v'
-    factor⊆ o k p = factor o k p .snd .snd
-
-    wkCFamLeaves : {k : K w} (i : w ⊆ w') → ∀ {v} → ForAllW k (v ⊆_) → ForAllW (wkK i k) (v ⊆_)
-    wkCFamLeaves {k = k} i fam p = ⊆-trans (fam (factor∈ i k p)) (factor⊆ i k p)
+      factor-pres-trans : {w w' : W} (i : w ⊆ w') (i' : w' ⊆ w'')
+        → factor (⊆-trans i i') ≋[⇒k] ⇒k-trans (factor i) (factor i')
 
   module _ (CF : CFrame) where
 
@@ -142,33 +134,3 @@ module Core
 
         -- a cover of w is a family of (w ⊆_) proofs
         family        : (k : K w) → ForAllW k (w ⊆_)
-
-        -- factorisation square commutes
-        family-stable : (i : w ⊆ w') (k : K w)
-          → ForAllW≋ (wkK i k) (wkCFamLeaves i (family k)) (strCFamRoot i (family (wkK i k)))
-
-    -- Identity condition
-    record Pointed : Set where
-
-      field
-        pointK[_] : ∀ w → K w
-        point∈    : ForAllW (pointK[ w ]) λ v → w ≡ v
-
-    -- Transitivity condition
-    record Joinable : Set₁ where
-
-      field
-        joinK : (k : K w) → ForAllW k K → K w
-        join∈ : (k : K w) (f : ForAllW k K) → ForAllW (joinK k f) λ v' → ∃₂ λ v (p : v ∈ k) → v' ∈ f p
-
-    -- Note: Speculative!
-    record CoPointed : Set where
-      field
-        copoint∈ : (k : K w) → w ∈ k
-
-    -- Note: Speculative!
-    record CoJoinable : Set₁ where
-
-      field
-        cojoinK : (k : K w) → v ∈ k → K v
-        cojoin∈ : (k : K w) (p : v ∈ k) → ForAllW (cojoinK k p) (_∈ k)
