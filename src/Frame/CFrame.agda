@@ -89,8 +89,8 @@ module Core
   _⇒k_ : W → W → Set
   w ⇒k v = Σ (K w → K v) λ f → (k : K w) → k ⊆k f k
 
-  _k$_ : (w ⇒k w') → K w → K w'
-  _k$_ = fst
+  _$k_ : (w ⇒k w') → K w → K w'
+  _$k_ = fst
 
   ⇒k-refl[_] : ∀ w → w ⇒k w
   ⇒k-refl[ _ ] = id , ⊆k-refl[_]
@@ -98,29 +98,35 @@ module Core
   ⇒k-trans : w ⇒k w' → w' ⇒k w'' → w ⇒k w''
   ⇒k-trans (f , p) (g , q) = g ∘ f , λ k → ⊆k-trans (p k) (q _)
 
-  _≋[⇒k]_ : w ⇒k w' → w ⇒k w' → Set
-  (f , p) ≋[⇒k] (g , q) = ∀ k → Σ (f k ≡ g k) λ fk≡gk → ≡-subst (k ⊆k_) fk≡gk (p k) ≋[⊆k] q k
+  record _≋[⇒k]_ (h h' : w ⇒k w') : Set where
+    constructor proof
+    f = h  .fst ; p = h  .snd
+    g = h' .fst ; q = h' .snd
+
+    field
+      dom≋ : ∀ k → f k ≡ g k
+      mon≋ : ∀ k → ForAllW≋ (g k) (≡-subst (k ⊆k_) (dom≋ k) (p k)) (q k)
 
   ⇒k-trans-unit-left : (h : w ⇒k w') → ⇒k-trans ⇒k-refl[ w ] h ≋[⇒k] h
-  ⇒k-trans-unit-left (f , p) k = ≡-refl , ⊆k-trans-unit-left (p k)
+  ⇒k-trans-unit-left (f , p) = proof (λ _ → ≡-refl) λ k → ⊆k-trans-unit-left (p k)
 
   ⇒k-trans-unit-right : (h : w ⇒k w') → ⇒k-trans h ⇒k-refl[ w' ] ≋[⇒k] h
-  ⇒k-trans-unit-right (f , p) k = ≡-refl , ⊆k-trans-unit-right (p k)
+  ⇒k-trans-unit-right (f , p) = proof (λ _ → ≡-refl) λ k → ⊆k-trans-unit-right (p k)
 
   strCFamRoot : (k : K w) (i : v ⊆ v') → ForAllW k (v' ⊆_) → ForAllW k (v ⊆_)
   strCFamRoot k i fam p = ⊆-trans i (fam p)
 
-  wkCFamLeaves : (k : K w) (h : w ⇒k w') → ForAllW k (w ⊆_) → ForAllW (h k$ k) (w ⊆_)
+  wkCFamLeaves : (k : K w) (h : w ⇒k w') → ForAllW k (w ⊆_) → ForAllW (h $k k) (w ⊆_)
   wkCFamLeaves k (g , p) f = λ x → let (_ , y , i) = p k x in ⊆-trans (f y) i
-  
+
   record CFrame : Set₁ where
 
     field
 
-      factor : {w w' : W} → w ⊆ w' → w ⇒k w'
+      factor : w ⊆ w' → w ⇒k w'
 
-      factor-pres-refl : {w : W}
-        → factor ⊆-refl ≋[⇒k] ⇒k-refl[ w ]
+      factor-pres-refl :
+          factor ⊆-refl ≋[⇒k] ⇒k-refl[ w ]
 
       factor-pres-trans : {w w' : W} (i : w ⊆ w') (i' : w' ⊆ w'')
         → factor (⊆-trans i i') ≋[⇒k] ⇒k-trans (factor i) (factor i')
