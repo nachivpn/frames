@@ -144,11 +144,6 @@ module Core
   ⇒k-trans-assoc h h' h'' = proof λ k
     → ≡-refl , ⊆k-trans-assoc (h $⊆ k) (h' $⊆ (h $k k)) (h'' $⊆ (h' $k (h $k k) ))
 
-  strCFamRoot : (k : K w) (i : v ⊆ v') → ForAllW k (v' ⊆_) → ForAllW k (v ⊆_)
-  strCFamRoot k i fam p = ⊆-trans i (fam p)
-
-  wkCFamLeaves : (k : K w) (h : w ⇒k w') → ForAllW k (w ⊆_) → ForAllW (h $k k) (w ⊆_)
-  wkCFamLeaves k h fam p = let (_ , q , i) = (h $⊆ k) p in ⊆-trans (fam q) i
 
   record CFrame : Set₁ where
 
@@ -167,7 +162,19 @@ module Core
     open CFrame CF
 
     record Coverage : Set₁ where
+
       field
 
         -- a cover of w is a family of (w ⊆_) proofs
         family        : (k : K w) → ForAllW k (w ⊆_)
+
+      strFam : {k : K w} (i : v ⊆ v') → ForAllW k (v' ⊆_) → ForAllW k (v ⊆_)
+      strFam i fam x = ⊆-trans i (fam x)
+
+      wkFam : {k : K w} {k' : K w'} → k ⊆k k' → ForAllW k (w ⊆_) → ForAllW k' (w ⊆_)
+      wkFam is fam x = let (_ , x' , i) = is x in ⊆-trans (fam x') i
+
+      field
+        -- factorisation square commutes
+        family-stable : (i : w ⊆ w') (k : K w)
+          → ForAllW≋ _ (wkFam (factor i $⊆ k) (family k)) (strFam i (family (factor i $k k)))
