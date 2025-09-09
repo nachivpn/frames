@@ -49,14 +49,6 @@ module Core
   _⊆k_ : K w → K w' → Set
   k ⊆k k' = ForAllW k' (λ v' → ∃ λ v → v ∈ k × (v ⊆ v'))
 
-  --
-  ForAllW≋ : (k : K w) {P : W → Set} → (f : ForAllW k P) (g : ForAllW k P)→  Set
-  ForAllW≋  {w} k f g = ForAll∈ k λ p → f p ≡ g p
-
-  -- equality on cover inclusion proofs
-  _≋[⊆k]_ : {k : K w} {k' : K w'} → k ⊆k k' → k ⊆k k' → Set
-  _≋[⊆k]_  {w} {w'} {k} {k'} = ForAllW≋ k'
-
   ⊆k-refl[_] : (k : K w) → k ⊆k k
   ⊆k-refl[ k ] {v} p = v , p , ⊆-refl[ v ]
 
@@ -66,6 +58,36 @@ module Core
     (v' , p' , i') = is' p''
     (v , p , i)    = is p'
     in (v , p , ⊆-trans i i')
+
+  --
+  ForAllW≋ : (k : K w) {P : W → Set} → (f : ForAllW k P) (g : ForAllW k P) →  Set
+  ForAllW≋  {w} k f g = ForAll∈ k λ p → f p ≡ g p
+
+  module _ {k : K w} {P : W → Set}  where
+
+    ForAllW≋-refl : (f : ForAllW k P) → ForAllW≋ k f f
+    ForAllW≋-refl f = λ _p → ≡-refl
+
+    ForAllW≋-sym : {f f' : ForAllW k P} → ForAllW≋ k f f' → ForAllW≋ k f' f
+    ForAllW≋-sym f≡f' = λ p → ≡-sym (f≡f' p)
+
+    ForAllW≋-trans : {f f' f'' : ForAllW k P} → ForAllW≋ k f f' → ForAllW≋ k f' f'' → ForAllW≋ k f f''
+    ForAllW≋-trans f≡f' f'≡f'' = λ p → ≡-trans (f≡f' p) (f'≡f'' p)
+
+  module _ {k : K w} {k' : K w'} where
+
+    -- equality on cover inclusion proofs
+    _≋[⊆k]_ : k ⊆k k' → k ⊆k k' → Set
+    _≋[⊆k]_ = ForAllW≋ k'
+
+    ≋[⊆k]-refl : (is : k ⊆k k') → is ≋[⊆k] is
+    ≋[⊆k]-refl = ForAllW≋-refl
+
+    ≋[⊆k]-sym : {is is' : k ⊆k k'} → is ≋[⊆k] is' → is' ≋[⊆k] is
+    ≋[⊆k]-sym = ForAllW≋-sym
+
+    ≋[⊆k]-trans : {is is' is'' : k ⊆k k'} → is ≋[⊆k] is' → is' ≋[⊆k] is'' → is ≋[⊆k] is''
+    ≋[⊆k]-trans = ForAllW≋-trans
 
   ⊆k-trans-unit-left : {k : K w} {k' : K w'} (is : k ⊆k k')
     → ⊆k-trans ⊆k-refl[ k ] is ≋[⊆k] is
@@ -86,38 +108,47 @@ module Core
     (_ , _ , i)     = is p'
     in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-assoc i i' i'')
 
+  -- functions mapping a coverage k to a "larger" cover k'
   _⇒k_ : W → W → Set
-  w ⇒k v = Σ (K w → K v) λ f → (k : K w) → k ⊆k f k
+  w ⇒k v = (k : K w) → Σ (K v) λ k' → k ⊆k k'
 
   _$k_ : (w ⇒k w') → K w → K w'
-  _$k_ = fst
+  h $k k = h k .fst
+
+  _$⊆_ : (h : w ⇒k w') → (k : K w) → k ⊆k (h $k k)
+  h $⊆ k = h k .snd
 
   ⇒k-refl[_] : ∀ w → w ⇒k w
-  ⇒k-refl[ _ ] = id , ⊆k-refl[_]
+  ⇒k-refl[ w ] = λ k → k , ⊆k-refl[ k ]
 
   ⇒k-trans : w ⇒k w' → w' ⇒k w'' → w ⇒k w''
-  ⇒k-trans (f , p) (g , q) = g ∘ f , λ k → ⊆k-trans (p k) (q _)
+  ⇒k-trans h h' = λ k → (h' $k (h $k k)) , ⊆k-trans (h $⊆ k) (h' $⊆ (h $k k))
 
+  -- extensional equality for ⇒k
   record _≋[⇒k]_ (h h' : w ⇒k w') : Set where
     constructor proof
-    f = h  .fst ; p = h  .snd
-    g = h' .fst ; q = h' .snd
-
     field
-      dom≋ : ∀ k → f k ≡ g k
-      mon≋ : ∀ k → ForAllW≋ (g k) (≡-subst (k ⊆k_) (dom≋ k) (p k)) (q k)
+      pw : (k : K w) → let (k1 , is1) = h k ; (k2 , is2) = h' k
+        in Σ (k1 ≡ k2) λ k1≡k2 → ≡-subst (k ⊆k_) k1≡k2 is1 ≋[⊆k] is2
+
+  -- TODO: ≋[⇒k]-refl, ≋[⇒k]-sym, ≋[⇒k]-trans
 
   ⇒k-trans-unit-left : (h : w ⇒k w') → ⇒k-trans ⇒k-refl[ w ] h ≋[⇒k] h
-  ⇒k-trans-unit-left (f , p) = proof (λ _ → ≡-refl) λ k → ⊆k-trans-unit-left (p k)
+  ⇒k-trans-unit-left h = proof λ k → ≡-refl , ⊆k-trans-unit-left (h $⊆ k)
 
   ⇒k-trans-unit-right : (h : w ⇒k w') → ⇒k-trans h ⇒k-refl[ w' ] ≋[⇒k] h
-  ⇒k-trans-unit-right (f , p) = proof (λ _ → ≡-refl) λ k → ⊆k-trans-unit-right (p k)
+  ⇒k-trans-unit-right h = proof λ k → ≡-refl , ⊆k-trans-unit-right (h $⊆ k)
+
+  ⇒k-trans-assoc : (h : u ⇒k v) (h' : v ⇒k w) (h'' : w ⇒k w')
+    → ⇒k-trans (⇒k-trans h h') h'' ≋[⇒k] ⇒k-trans h (⇒k-trans h' h'')
+  ⇒k-trans-assoc h h' h'' = proof λ k
+    → ≡-refl , ⊆k-trans-assoc (h $⊆ k) (h' $⊆ (h $k k)) (h'' $⊆ (h' $k (h $k k) ))
 
   strCFamRoot : (k : K w) (i : v ⊆ v') → ForAllW k (v' ⊆_) → ForAllW k (v ⊆_)
   strCFamRoot k i fam p = ⊆-trans i (fam p)
 
   wkCFamLeaves : (k : K w) (h : w ⇒k w') → ForAllW k (w ⊆_) → ForAllW (h $k k) (w ⊆_)
-  wkCFamLeaves k (g , p) f = λ x → let (_ , y , i) = p k x in ⊆-trans (f y) i
+  wkCFamLeaves k h fam p = let (_ , q , i) = (h $⊆ k) p in ⊆-trans (fam q) i
 
   record CFrame : Set₁ where
 
