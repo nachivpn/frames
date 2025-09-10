@@ -108,40 +108,62 @@ module Core
     (_ , _ , i)     = is p'
     in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-assoc i i' i'')
 
-  -- functions mapping a coverage k to a "larger" cover k'
-  _⇒k_ : W → W → Set
-  w ⇒k v = (k : K w) → Σ (K v) λ k' → k ⊆k k'
+  _＠_ : K w → W → Set
+  k ＠ v = Σ (K v) λ k' → k ⊆k k'
 
-  _$k_ : (w ⇒k w') → K w → K w'
+  module _ {k : K w} {w' : W} where
+
+    _≋[＠]_ : k ＠ w' → k ＠ w' → Set
+    (k1' , is1) ≋[＠] (k2' , is2) = Σ (k1' ≡ k2') λ k1≡k2 → ≡-subst (_{-k-} ⊆k_) k1≡k2 is1 ≋[⊆k] is2
+
+    ≋[＠]-refl : (x : k ＠ w') → x ≋[＠] x
+    ≋[＠]-refl (k , is) = ≡-refl {x = k} , ≋[⊆k]-refl is
+
+    ≋[＠]-sym : {x y : k ＠ w'} → x ≋[＠] y → y ≋[＠] x
+    ≋[＠]-sym (≡-refl , is≋is') = ≡-refl , ≋[⊆k]-sym is≋is'
+
+    ≋[＠]-trans : {x y z : k ＠ w'} → x ≋[＠] y → y ≋[＠] z → x ≋[＠] z
+    ≋[＠]-trans (≡-refl , is≋is') (≡-refl , is'≋is'') = ≡-refl , ≋[⊆k]-trans is≋is' is'≋is''
+
+  -- functions mapping a coverage k to a "larger" cover k'
+  _⇒＠_ : W → W → Set
+  w ⇒＠ v = (k : K w) → Σ (K v) λ k' → k ⊆k k'
+
+  _$k_ : (w ⇒＠ w') → K w → K w'
   h $k k = h k .fst
 
-  _$⊆_ : (h : w ⇒k w') → (k : K w) → k ⊆k (h $k k)
+  _$⊆_ : (h : w ⇒＠ w') → (k : K w) → k ⊆k (h $k k)
   h $⊆ k = h k .snd
 
-  ⇒k-refl[_] : ∀ w → w ⇒k w
-  ⇒k-refl[ w ] = λ k → k , ⊆k-refl[ k ]
+  -- extensional equality for ⇒＠
+  _≋[⇒＠]_ : w ⇒＠ w' → w ⇒＠ w' → Set
+  h ≋[⇒＠] h' = (k : K _{-w-}) → h k ≋[＠] h' k
 
-  ⇒k-trans : w ⇒k w' → w' ⇒k w'' → w ⇒k w''
-  ⇒k-trans h h' = λ k → (h' $k (h $k k)) , ⊆k-trans (h $⊆ k) (h' $⊆ (h $k k))
+  ≋[⇒＠]-refl : (h : w ⇒＠ w') → h ≋[⇒＠] h
+  ≋[⇒＠]-refl h = λ k → ≋[＠]-refl (h k)
 
-  -- extensional equality for ⇒k
-  record _≋[⇒k]_ (h h' : w ⇒k w') : Set where
-    constructor proof
-    field
-      pw : (k : K w) → let (k1 , is1) = h k ; (k2 , is2) = h' k
-        in Σ (k1 ≡ k2) λ k1≡k2 → ≡-subst (k ⊆k_) k1≡k2 is1 ≋[⊆k] is2
+  ≋[⇒＠]-sym : {h h' : w ⇒＠ w'} → h ≋[⇒＠] h' → h' ≋[⇒＠] h
+  ≋[⇒＠]-sym p = λ k → ≋[＠]-sym (p k)
 
-  -- TODO: ≋[⇒k]-refl, ≋[⇒k]-sym, ≋[⇒k]-trans
+  ≋[⇒＠]-trans : {h h' h'' : w ⇒＠ w'} → h ≋[⇒＠] h' → h' ≋[⇒＠] h'' → h ≋[⇒＠] h''
+  ≋[⇒＠]-trans p q = λ k → ≋[＠]-trans (p k) (q k)
 
-  ⇒k-trans-unit-left : (h : w ⇒k w') → ⇒k-trans ⇒k-refl[ w ] h ≋[⇒k] h
-  ⇒k-trans-unit-left h = proof λ k → ≡-refl , ⊆k-trans-unit-left (h $⊆ k)
+  -- (W, ⇒＠) forms a category
+  ⇒＠-refl[_] : ∀ w → w ⇒＠ w
+  ⇒＠-refl[ w ] = λ k → k , ⊆k-refl[ k ]
 
-  ⇒k-trans-unit-right : (h : w ⇒k w') → ⇒k-trans h ⇒k-refl[ w' ] ≋[⇒k] h
-  ⇒k-trans-unit-right h = proof λ k → ≡-refl , ⊆k-trans-unit-right (h $⊆ k)
+  ⇒＠-trans : w ⇒＠ w' → w' ⇒＠ w'' → w ⇒＠ w''
+  ⇒＠-trans h h' = λ k → (h' $k (h $k k)) , ⊆k-trans (h $⊆ k) (h' $⊆ (h $k k))
 
-  ⇒k-trans-assoc : (h : u ⇒k v) (h' : v ⇒k w) (h'' : w ⇒k w')
-    → ⇒k-trans (⇒k-trans h h') h'' ≋[⇒k] ⇒k-trans h (⇒k-trans h' h'')
-  ⇒k-trans-assoc h h' h'' = proof λ k
+  ⇒＠-trans-unit-left : (h : w ⇒＠ w') → ⇒＠-trans ⇒＠-refl[ w ] h ≋[⇒＠] h
+  ⇒＠-trans-unit-left h = λ k → ≡-refl , ⊆k-trans-unit-left (h $⊆ k)
+
+  ⇒＠-trans-unit-right : (h : w ⇒＠ w') → ⇒＠-trans h ⇒＠-refl[ w' ] ≋[⇒＠] h
+  ⇒＠-trans-unit-right h = λ k → ≡-refl , ⊆k-trans-unit-right (h $⊆ k)
+
+  ⇒＠-trans-assoc : (h : u ⇒＠ v) (h' : v ⇒＠ w) (h'' : w ⇒＠ w')
+    → ⇒＠-trans (⇒＠-trans h h') h'' ≋[⇒＠] ⇒＠-trans h (⇒＠-trans h' h'')
+  ⇒＠-trans-assoc h h' h'' = λ k
     → ≡-refl , ⊆k-trans-assoc (h $⊆ k) (h' $⊆ (h $k k)) (h'' $⊆ (h' $k (h $k k) ))
 
 
@@ -149,13 +171,13 @@ module Core
 
     field
 
-      factor : w ⊆ w' → w ⇒k w'
+      factor : w ⊆ w' → w ⇒＠ w'
 
       factor-pres-refl :
-          factor ⊆-refl ≋[⇒k] ⇒k-refl[ w ]
+          factor ⊆-refl ≋[⇒＠] ⇒＠-refl[ w ]
 
       factor-pres-trans : {w w' : W} (i : w ⊆ w') (i' : w' ⊆ w'')
-        → factor (⊆-trans i i') ≋[⇒k] ⇒k-trans (factor i) (factor i')
+        → factor (⊆-trans i i') ≋[⇒＠] ⇒＠-trans (factor i) (factor i')
 
   module _ (CF : CFrame) where
 
@@ -178,3 +200,30 @@ module Core
         -- factorisation square commutes
         family-stable : (i : w ⊆ w') (k : K w)
           → ForAllW≋ _ (wkFam (factor i $⊆ k) (family k)) (strFam i (family (factor i $k k)))
+
+
+    record Pointed : Set where
+
+      field
+
+        -- a pointed cover
+        pointK[_]     : ∀ w → K w
+
+        -- w is in pointK
+        point∈[_]     : ∀ w → w ∈ pointK[ w ]
+
+        -- only w is in pointK
+        pointK-single : ForAllW (pointK[ w ]) (w ≡_)
+
+        -- there is only one way for w to be in pointK (is this needed?)
+        --point∈-uniq : ForAll∈ (pointK[ w ]) λ p → ≡-subst (_∈ pointK[ w ]) (pointK-single p) (point∈[ w ]) ≡ p
+
+      pointK-pres-⊆ : w ⊆ w' → pointK[ w ] ⊆k pointK[ w' ]
+      pointK-pres-⊆ {w} {w'} i = λ x → w , point∈[ w ] , ≡-subst (w ⊆_) (pointK-single x) i
+
+      -- canonical element of `pointK[ w ] ＠ w'` for w ⊆ w'
+      point＠[_] : w ⊆ w' → pointK[ w ] ＠ w'
+      point＠[ i ] = pointK[ _ ] , pointK-pres-⊆ i
+
+      field
+        factor-pres-point : (i : w ⊆ w') → factor i pointK[ w ] ≋[＠] point＠[ i ]
