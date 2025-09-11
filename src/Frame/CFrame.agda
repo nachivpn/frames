@@ -201,7 +201,6 @@ module Core
         family-stable : (i : w ⊆ w') (k : K w)
           → ForAllW≋ _ (wkFam (factor i $⊆ k) (family k)) (strFam i (family (factor i $k k)))
 
-
     record Pointed : Set where
 
       field
@@ -209,14 +208,14 @@ module Core
         -- a pointed cover
         pointK[_]     : ∀ w → K w
 
-        -- w is in pointK
+        -- w is covered by pointK[ w ]
         point∈[_]     : ∀ w → w ∈ pointK[ w ]
 
-        -- only w is in pointK
+        -- only w can be covered by pointK[ w ]
         pointK-single : ForAllW (pointK[ w ]) (w ≡_)
 
-        -- there is only one way for w to be in pointK (is this needed?)
-        --point∈-uniq : ForAll∈ (pointK[ w ]) λ p → ≡-subst (_∈ pointK[ w ]) (pointK-single p) (point∈[ w ]) ≡ p
+        -- uniqueness of identity proofs for pointK-single (retains --without-K, but is it worth it?)
+        pointK-uip[_] : ∀ w → pointK-single point∈[ w ] ≡ ≡-refl
 
       pointK-pres-⊆ : w ⊆ w' → pointK[ w ] ⊆k pointK[ w' ]
       pointK-pres-⊆ {w} {w'} i = λ x → w , point∈[ w ] , ≡-subst (w ⊆_) (pointK-single x) i
