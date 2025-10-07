@@ -25,27 +25,27 @@ private
     w w' w'' u u' v v' : W
 
 module Core
+  -- Neighborhood function, which assigns a neighborhood to a world
+  -- Intuition: think of K having the type W → 𝒫 (𝒫 W)
   (K   : W → Set)
-  -- `v ∈ (k : K w)` means v is in the cover k
+  -- Membership relation: v ∈ k means v is in the neighborhood k (of w)
+  -- Intuition: set membership
   (_∈_ : (v : W) {w : W} → K w → Set)
-  -- wkK is functorial
-  --(wkK : {w w' : W} → w ⊆ w' → K w → K w')
-  --(wkK-pres-refl  : {w : W} (k : K w) → wkK ⊆-refl[ w ] k ≡ k)
-  --(wkK-pres-trans : {w w' w'' : W} (i : w ⊆ w') (i' : w' ⊆ w'') (k : K w) → wkK (⊆-trans i i') k ≡ wkK i' (wkK i k))
   where
 
-  -- a predicate is satisfied by all elements of a cover
+  -- a predicate satisfied by all elements of a neighborhood
   ForAllW : (k : K w) (P : W → Set) → Set
   ForAllW k P = ∀ {v} → v ∈ k → P v
 
+  -- ForAllW flipped
   AllForW : (P : W → Set) (k : K w) → Set
   AllForW P k = ForAllW k P
 
-  -- a predicate is satisfied by all proofs witnessing membership of a cover
+  -- a predicate satisfied by all proofs witnessing membership
   ForAll∈ : (k : K w) (P : ∀ {v} → v ∈ k → Set) → Set
   ForAll∈ k P = ∀ {v} → (p : v ∈ k) → P p
 
-  -- inclusion of covers
+  -- ordering of neighborhoods
   _⊆k_ : K w → K w' → Set
   k ⊆k k' = ForAllW k' (λ v' → ∃ λ v → v ∈ k × (v ⊆ v'))
 
@@ -59,10 +59,11 @@ module Core
     (v , p , i)    = is p'
     in (v , p , ⊆-trans i i')
 
-  --
+  -- extensional equality of ForAllW proofs
   ForAllW≋ : (k : K w) {P : W → Set} → (f : ForAllW k P) (g : ForAllW k P) →  Set
   ForAllW≋  {w} k f g = ForAll∈ k λ p → f p ≡ g p
 
+  -- ForAllW≋ is an equivalence
   module _ {k : K w} {P : W → Set}  where
 
     ForAllW≋-refl : (f : ForAllW k P) → ForAllW≋ k f f
@@ -74,9 +75,9 @@ module Core
     ForAllW≋-trans : {f f' f'' : ForAllW k P} → ForAllW≋ k f f' → ForAllW≋ k f' f'' → ForAllW≋ k f f''
     ForAllW≋-trans f≡f' f'≡f'' = λ p → ≡-trans (f≡f' p) (f'≡f'' p)
 
+  -- extensional equality of neighborhood ordering
   module _ {k : K w} {k' : K w'} where
 
-    -- equality on cover inclusion proofs
     _≋[⊆k]_ : k ⊆k k' → k ⊆k k' → Set
     _≋[⊆k]_ = ForAllW≋ k'
 
@@ -108,6 +109,7 @@ module Core
     (_ , _ , i)     = is p'
     in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-assoc i i' i'')
 
+  -- "factorisation of k @ v"
   _＠_ : K w → W → Set
   k ＠ v = Σ (K v) λ k' → k ⊆k k'
 
@@ -125,59 +127,65 @@ module Core
     ≋[＠]-trans : {x y z : k ＠ w'} → x ≋[＠] y → y ≋[＠] z → x ≋[＠] z
     ≋[＠]-trans (≡-refl , is≋is') (≡-refl , is'≋is'') = ≡-refl , ≋[⊆k]-trans is≋is' is'≋is''
 
-  -- functions mapping a coverage k to a "larger" cover k'
-  _⇒＠_ : W → W → Set
-  w ⇒＠ v = (k : K w) → Σ (K v) λ k' → k ⊆k k'
+  -- factorising function
+  _⇒k_ : W → W → Set
+  w ⇒k v = (k : K w) → k ＠ v
 
-  _$k_ : (w ⇒＠ w') → K w → K w'
+  -- restriction of a factorisation function
+  -- to the first component of its result
+  _$k_ : (w ⇒k w') → K w → K w'
   h $k k = h k .fst
 
-  _$⊆_ : (h : w ⇒＠ w') → (k : K w) → k ⊆k (h $k k)
+  -- restriction of a factorisation function
+  -- to the second component of its result
+  _$⊆_ : (h : w ⇒k w') → (k : K w) → k ⊆k (h $k k)
   h $⊆ k = h k .snd
 
-  -- extensional equality for ⇒＠
-  _≋[⇒＠]_ : w ⇒＠ w' → w ⇒＠ w' → Set
-  h ≋[⇒＠] h' = (k : K _{-w-}) → h k ≋[＠] h' k
+  -- extensional equality for factorising functions
+  _≋[⇒k]_ : w ⇒k w' → w ⇒k w' → Set
+  h ≋[⇒k] h' = (k : K _{-w-}) → h k ≋[＠] h' k
 
-  ≋[⇒＠]-refl : (h : w ⇒＠ w') → h ≋[⇒＠] h
-  ≋[⇒＠]-refl h = λ k → ≋[＠]-refl (h k)
+  ≋[⇒k]-refl : (h : w ⇒k w') → h ≋[⇒k] h
+  ≋[⇒k]-refl h = λ k → ≋[＠]-refl (h k)
 
-  ≋[⇒＠]-sym : {h h' : w ⇒＠ w'} → h ≋[⇒＠] h' → h' ≋[⇒＠] h
-  ≋[⇒＠]-sym p = λ k → ≋[＠]-sym (p k)
+  ≋[⇒k]-sym : {h h' : w ⇒k w'} → h ≋[⇒k] h' → h' ≋[⇒k] h
+  ≋[⇒k]-sym p = λ k → ≋[＠]-sym (p k)
 
-  ≋[⇒＠]-trans : {h h' h'' : w ⇒＠ w'} → h ≋[⇒＠] h' → h' ≋[⇒＠] h'' → h ≋[⇒＠] h''
-  ≋[⇒＠]-trans p q = λ k → ≋[＠]-trans (p k) (q k)
+  ≋[⇒k]-trans : {h h' h'' : w ⇒k w'} → h ≋[⇒k] h' → h' ≋[⇒k] h'' → h ≋[⇒k] h''
+  ≋[⇒k]-trans p q = λ k → ≋[＠]-trans (p k) (q k)
 
-  -- (W, ⇒＠) forms a category
-  ⇒＠-refl[_] : ∀ w → w ⇒＠ w
-  ⇒＠-refl[ w ] = λ k → k , ⊆k-refl[ k ]
+  -- (W, ⇒k) forms a category
+  ⇒k-refl[_] : ∀ w → w ⇒k w
+  ⇒k-refl[ w ] = λ k → k , ⊆k-refl[ k ]
 
-  ⇒＠-trans : w ⇒＠ w' → w' ⇒＠ w'' → w ⇒＠ w''
-  ⇒＠-trans h h' = λ k → (h' $k (h $k k)) , ⊆k-trans (h $⊆ k) (h' $⊆ (h $k k))
+  ⇒k-trans : w ⇒k w' → w' ⇒k w'' → w ⇒k w''
+  ⇒k-trans h h' = λ k → (h' $k (h $k k)) , ⊆k-trans (h $⊆ k) (h' $⊆ (h $k k))
 
-  ⇒＠-trans-unit-left : (h : w ⇒＠ w') → ⇒＠-trans ⇒＠-refl[ w ] h ≋[⇒＠] h
-  ⇒＠-trans-unit-left h = λ k → ≡-refl , ⊆k-trans-unit-left (h $⊆ k)
+  ⇒k-trans-unit-left : (h : w ⇒k w') → ⇒k-trans ⇒k-refl[ w ] h ≋[⇒k] h
+  ⇒k-trans-unit-left h = λ k → ≡-refl , ⊆k-trans-unit-left (h $⊆ k)
 
-  ⇒＠-trans-unit-right : (h : w ⇒＠ w') → ⇒＠-trans h ⇒＠-refl[ w' ] ≋[⇒＠] h
-  ⇒＠-trans-unit-right h = λ k → ≡-refl , ⊆k-trans-unit-right (h $⊆ k)
+  ⇒k-trans-unit-right : (h : w ⇒k w') → ⇒k-trans h ⇒k-refl[ w' ] ≋[⇒k] h
+  ⇒k-trans-unit-right h = λ k → ≡-refl , ⊆k-trans-unit-right (h $⊆ k)
 
-  ⇒＠-trans-assoc : (h : u ⇒＠ v) (h' : v ⇒＠ w) (h'' : w ⇒＠ w')
-    → ⇒＠-trans (⇒＠-trans h h') h'' ≋[⇒＠] ⇒＠-trans h (⇒＠-trans h' h'')
-  ⇒＠-trans-assoc h h' h'' = λ k
+  ⇒k-trans-assoc : (h : u ⇒k v) (h' : v ⇒k w) (h'' : w ⇒k w')
+    → ⇒k-trans (⇒k-trans h h') h'' ≋[⇒k] ⇒k-trans h (⇒k-trans h' h'')
+  ⇒k-trans-assoc h h' h'' = λ k
     → ≡-refl , ⊆k-trans-assoc (h $⊆ k) (h' $⊆ (h $k k)) (h'' $⊆ (h' $k (h $k k) ))
-
 
   record CFrame : Set₁ where
 
     field
 
-      factor : w ⊆ w' → w ⇒＠ w'
+      -- i.e. factor : w ⊆ w' → (k : K w) → Σ (K w') λ k' → k ⊆k k'
+      factor : w ⊆ w' → w ⇒k w'
 
+      --
+      -- factor is functorial in its first argument
+      --
       factor-pres-refl :
-          factor ⊆-refl ≋[⇒＠] ⇒＠-refl[ w ]
-
+          factor ⊆-refl ≋[⇒k] ⇒k-refl[ w ]
       factor-pres-trans : {w w' : W} (i : w ⊆ w') (i' : w' ⊆ w'')
-        → factor (⊆-trans i i') ≋[⇒＠] ⇒＠-trans (factor i) (factor i')
+        → factor (⊆-trans i i') ≋[⇒k] ⇒k-trans (factor i) (factor i')
 
   module _ (CF : CFrame) where
 
@@ -187,8 +195,9 @@ module Core
 
       field
 
-        -- a cover of w is a family of (w ⊆_) proofs
-        family        : (k : K w) → ForAllW k (w ⊆_)
+        -- "Covering family"
+        -- Every neighbor in a neighborhood is reachable via ⊆
+        cfamily        : (k : K w) → ForAllW k (w ⊆_)
 
       strFam : {k : K w} (i : v ⊆ v') → ForAllW k (v' ⊆_) → ForAllW k (v ⊆_)
       strFam i fam x = ⊆-trans i (fam x)
@@ -199,30 +208,32 @@ module Core
       field
         -- factorisation square commutes
         family-stable : (i : w ⊆ w') (k : K w)
-          → ForAllW≋ _ (wkFam (factor i $⊆ k) (family k)) (strFam i (family (factor i $k k)))
+          → ForAllW≋ _ (wkFam (factor i $⊆ k) (cfamily k)) (strFam i (cfamily (factor i $k k)))
 
     record Pointed : Set where
 
       field
 
-        -- a pointed cover
+        -- a "pointed" neighborhood
         pointK[_]     : ∀ w → K w
 
-        -- w is covered by pointK[ w ]
+        -- w is a member of pointK[ w ]
         point∈[_]     : ∀ w → w ∈ pointK[ w ]
 
-        -- only w can be covered by pointK[ w ]
-        pointK-single : ForAllW (pointK[ w ]) (w ≡_)
+        -- every neighbor in pointK is an intuitionistic future of w reachable through ⊆
+        pointK-family : ForAllW (pointK[ w ]) (w ⊆_ )
 
-        -- uniqueness of identity proofs for pointK-single (retains --without-K, but is it worth it?)
-        pointK-uip[_] : ∀ w → pointK-single point∈[ w ] ≡ ≡-refl
+        -- coherence condition on pointed neighborhoods
+        -- i.e. reaching w (as its own neighbor) via pointK-family must be through ⊆-refl
+        pointK-coh[_] : ∀ w → pointK-family point∈[ w ] ≡ ⊆-refl[ w ]
 
       pointK-pres-⊆ : w ⊆ w' → pointK[ w ] ⊆k pointK[ w' ]
-      pointK-pres-⊆ {w} {w'} i = λ x → w , point∈[ w ] , ≡-subst (w ⊆_) (pointK-single x) i
+      pointK-pres-⊆ {w} {w'} i = λ x → w , point∈[ w ] , ⊆-trans i (pointK-family x)
 
-      -- canonical element of `pointK[ w ] ＠ w'` for w ⊆ w'
+      -- canonical factorisation of pointK[ w ] at w'
       point＠[_] : w ⊆ w' → pointK[ w ] ＠ w'
       point＠[ i ] = pointK[ _ ] , pointK-pres-⊆ i
 
       field
+        -- factor preserves "identity" in its second argument
         factor-pres-point : (i : w ⊆ w') → factor i pointK[ w ] ≋[＠] point＠[ i ]
