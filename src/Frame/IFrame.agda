@@ -6,6 +6,15 @@ open import Relation.Binary.PropositionalEquality
   using (_≡_)
   renaming (refl to ≡-refl; sym to ≡-sym; trans to ≡-trans)
 
+--
+record Preorder (W : Set) (_⊆_ : W → W → Set) : Set where
+  field
+    ⊆-trans            : {w w' w'' : W} → (i : w ⊆ w') → (i' : w' ⊆ w'') → w ⊆ w''
+    ⊆-refl             : {w : W} → w ⊆ w
+
+  ⊆-refl[_] : (w : W) → w ⊆ w
+  ⊆-refl[ _ ] = ⊆-refl
+
 -- Intuitionistic Frame
 record IFrame (W : Set) (_⊆_ : W → W → Set) : Set where
   field
