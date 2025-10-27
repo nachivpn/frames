@@ -14,6 +14,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_)
            ; subst to ≡-subst ; subst₂ to ≡-subst₂)
 open import Data.Product using (Σ ; ∃; ∃₂; _×_; _,_; -,_)
   renaming (proj₁ to fst; proj₂ to snd)
+open import Data.Empty using (⊥)
 
 private
   variable
@@ -67,7 +68,7 @@ module Core
     field
 
       wkK        : w ⊆ w' → K w → K w'
-      
+
       wkK-resp-⊆ : (i : w ⊆ w') (k : K w) → k ⊆k wkK i k
 
   module _ (CF : NFrame) where
@@ -141,3 +142,26 @@ module Core
           let (u , u∈k , v∈h⟨u∈k⟩) = joinK-bwd-member k h v∈J
           in u , u∈k , v , v∈h⟨u∈k⟩ , ⊆-refl[ v ]
         }
+
+    -- ∅ ∈ K w
+    record Empty : Set₁ where
+
+      field
+        emptyK[_] : ∀ w → K w
+        emptyK-bwd-absurd : ForAllW (emptyK[ w ]) λ _ → ⊥
+
+    -- ∅ ∉ K w
+    record Unital : Set₁ where
+
+      field
+        unitK[_] : ∀ w → K w
+
+    -- k1, k2 ∈ K w implies k1 ∩ k2 ∈ K w
+    record Magma : Set₁ where
+
+      field
+
+        _⊗_ : K w → K w → K w
+
+        ⊗-bwd-reachable : (k1 k2 : K w) → ForAllW (k1 ⊗ k2)
+          λ v → ∃₂ λ v1 v2 → v1 ∈ k1 × v1 ⊆ v × v2 ∈ k2 × v2 ⊆ v
