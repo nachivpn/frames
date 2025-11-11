@@ -217,4 +217,15 @@ record ClosedUnderInt : Set where
       let (v∈n1 , v∈n2) = ⊗-bwd-reachable n1 n2 v∈n1⊗n2
       in (-, (-, v∈n1 , ⊆-refl , v∈n2 , ⊆-refl))
     }
-    
+
+record Nuclear : Set where
+  field
+    refinement   : Refinement
+    reachability : Reachability
+    identity     : Identity
+    transitivity : Transitivity
+
+  open Refinement refinement public
+  open Reachability reachability public
+  open Identity identity public
+  open Transitivity transitivity public
