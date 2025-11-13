@@ -23,6 +23,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_)
            ; subst to ≡-subst ; subst₂ to ≡-subst₂)
 open import Data.Product using (Σ ; ∃; ∃₂; _×_; _,_; -,_)
   renaming (proj₁ to fst; proj₂ to snd)
+open import Data.Sum using (_⊎_)
 open import Data.Empty using (⊥)
 
 private
@@ -217,6 +218,19 @@ record ClosedUnderInt : Set where
       let (v∈n1 , v∈n2) = ⊗-bwd-reachable n1 n2 v∈n1⊗n2
       in (-, (-, v∈n1 , ⊆-refl , v∈n2 , ⊆-refl))
     }
+
+-- Closure under union
+-- n1, n2 ∈ N w implies n1 ∪ n2 ∈ N w
+record ClosedUnderUni : Set where
+
+  field
+
+    -- the "union neighborhood"
+    _⊕_ : N w → N w → N w
+
+    -- a member of n1 ⊕ n2 is a member of either n1 or n2
+    ⊕-bwd-reachable : (n1 n2 : N w) → ForAllW (n1 ⊕ n2)
+      λ v → v ∈ n1 ⊎ v ∈ n2
 
 record Nuclear : Set where
   field
