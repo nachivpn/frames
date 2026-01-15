@@ -106,6 +106,11 @@ module _ {a p} {A : Set a} {P : A → Set p}
                       → subst P eq g ≡ g
   subst-application′′ refl = refl
 
+  subst˘-application′′ : ∀ {x₁ x₂} → (eq : x₁ ≡ x₂)
+                      → g ≡ subst P eq g
+  subst˘-application′′ p = sym (subst-application′′ p)
+
+
 module _ {a p b q} {A : Set a} {P : A → Set p} {B : Set b} {Q : A → Set q}
          (g : {x : A} → P x → B → Q x) where
   subst-application1′ : ∀ {x₁ x₂ y z} → (eq : x₁ ≡ x₂)
