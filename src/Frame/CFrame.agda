@@ -1,4 +1,4 @@
-{-# OPTIONS --safe --without-K #-}
+{-# OPTIONS --safe #-}
 open import Frame.IFrame
 
 module Frame.CFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) where
@@ -20,6 +20,7 @@ open import Relation.Unary using () renaming (Pred to Predℓ ; _⊆_ to _⊑_)
 open import Level using (0ℓ)
 
 open import PUtil using (Σ×-≡,≡,≡→≡)
+open import HEUtil
 
 private
   variable
@@ -74,54 +75,92 @@ module Core
     in (v , p , ⊆-trans i i')
 
   -- extensional equality of ForAllW proofs
-  ForAllW≋ : (α : N w) {P : Pred W} → (f : ForAllW α P) (g : ForAllW α P) →  Set
-  ForAllW≋  {w} α f g = ForAll∈ α λ p → f p ≡ g p
+  ForAllW≡ : (α : N w) {P : Pred W} → (f : ForAllW α P) (g : ForAllW α P) → Set
+  ForAllW≡  {w} α f g = ForAll∈ α λ p → f p ≡ g p
 
-  -- ForAllW≋ is an equivalence
+  -- ForAllW≡ is an equivalence
   module _ {α : N w} {P : Pred W}  where
 
-    ForAllW≋-refl : (f : ForAllW α P) → ForAllW≋ α f f
-    ForAllW≋-refl f = λ _p → ≡-refl
+    ForAllW≡-refl : (f : ForAllW α P) → ForAllW≡ α f f
+    ForAllW≡-refl f = λ _p → ≡-refl
 
-    ForAllW≋-sym : {f f' : ForAllW α P} → ForAllW≋ α f f' → ForAllW≋ α f' f
-    ForAllW≋-sym f≡f' = λ p → ≡-sym (f≡f' p)
+    ForAllW≡-sym : {f f' : ForAllW α P} → ForAllW≡ α f f' → ForAllW≡ α f' f
+    ForAllW≡-sym f≡f' = λ p → ≡-sym (f≡f' p)
 
-    ForAllW≋-trans : {f f' f'' : ForAllW α P} → ForAllW≋ α f f' → ForAllW≋ α f' f'' → ForAllW≋ α f f''
-    ForAllW≋-trans f≡f' f'≡f'' = λ p → ≡-trans (f≡f' p) (f'≡f'' p)
+    ForAllW≡-trans : {f f' f'' : ForAllW α P} → ForAllW≡ α f f' → ForAllW≡ α f' f'' → ForAllW≡ α f f''
+    ForAllW≡-trans f≡f' f'≡f'' = λ p → ≡-trans (f≡f' p) (f'≡f'' p)
+
+  ForAllW≅ : {α α' : N w} {P : Pred W} → (f : ForAllW α P) (f' : ForAllW α' P) →  Set
+  ForAllW≅ {w} {α} {α'} f f' = α ≡ α' × ∀ {v} {p : v ∈ α} {p' : v ∈ α'} → p ≅ p' → f p ≡ f' p'
+
+  -- ForAllW≡ is an equivalence
+  module _ {P : Pred W}  where
+
+    ForAllW≅-refl : {α : N w} (f : ForAllW α P) → ForAllW≅ f f
+    ForAllW≅-refl f = ≡-refl , λ p → ≡-cong f (≅-to-≡ p)
+
+    ForAllW≅-sym : {α α' : N w} {f : ForAllW α P} {f' : ForAllW α' P} → ForAllW≅ f f' → ForAllW≅ f' f
+    ForAllW≅-sym (α≡α' , f≅f') = ≡-sym α≡α' , λ x → ≡-sym (f≅f' (≅-sym x))
+
+    ForAllW≅-trans : {α α' α'' : N w} {f : ForAllW α P} {f' : ForAllW α' P} {f'' : ForAllW α'' P}
+      → ForAllW≅ f f' → ForAllW≅ f' f'' → ForAllW≅ f f''
+    ForAllW≅-trans (≡-refl , f≅f') (α'≡α'' , f'≅f'') =  α'≡α''
+      , λ x → ≡-trans (f≅f' ≅-refl) (f'≅f'' x)
+
+  Exists∈≅ : {α α' : N w} {P : ∀ {v} → v ∈ α → Set} {P' : ∀ {v} → v ∈ α' → Set}
+    → (x : Exists∈ α P) (y : Exists∈ α' P') → Set
+  Exists∈≅ {w} {α} {α'} (v , p , q) (v' , p' , q') = v ≡ v' × p ≅ p' × q ≅ q'
+
+  Exists∈≅-refl : {α : N w} {P : ∀ {v} → v ∈ α → Set} (x : Exists∈ α P)
+    → Exists∈≅ x x
+  Exists∈≅-refl x = ≡-refl , ≅-refl , ≅-refl
+
+  Exists∈≅-sym : {α α' : N w} {P : ∀ {v} → v ∈ α → Set} {P' : ∀ {v} → v ∈ α' → Set}
+    → {x : Exists∈ α P} {y : Exists∈ α' P'}
+    → Exists∈≅ x y → Exists∈≅ y x
+  Exists∈≅-sym (q , r , s) = ≡-sym q , ≅-sym r , ≅-sym s
+
+  Exists∈≅-trans : {α α' α'' : N w}
+    → {P : ∀ {v} → v ∈ α → Set} {P' : ∀ {v} → v ∈ α' → Set} {P'' : ∀ {v} → v ∈ α'' → Set}
+    → {x : Exists∈ α P} {y : Exists∈ α' P'} {z : Exists∈ α'' P''}
+    → Exists∈≅ x y → Exists∈≅ y z → Exists∈≅ x z
+  Exists∈≅-trans (q₁ , r₁ , s₁) (q₂ , r₂ , s₂)
+    = ≡-trans q₁ q₂ , ≅-trans r₁ r₂ , ≅-trans s₁ s₂
 
   -- extensional equality of refinement proofs
-  module _ {α : N w} {α' : N w'} where
+  module _ {α : N w} where
 
-    _≋[≼]_ : α ≼ α' → α ≼ α' → Set
-    _≋[≼]_ = ForAllW≋ α'
+    _≋[≼]_ : {α' α'' : N w'} → α ≼ α' → α ≼ α'' → Set
+    _≋[≼]_ = ForAllW≅
 
-    ≋[≼]-refl : (is : α ≼ α') → is ≋[≼] is
-    ≋[≼]-refl = ForAllW≋-refl
+    ≋[≼]-refl : {α' : N w'} → (is : α ≼ α') → is ≋[≼] is
+    ≋[≼]-refl = ForAllW≅-refl
 
-    ≋[≼]-sym : {is is' : α ≼ α'} → is ≋[≼] is' → is' ≋[≼] is
-    ≋[≼]-sym = ForAllW≋-sym
+    ≋[≼]-sym : {α' α'' : N w'} → {is : α ≼ α'} {is' : α ≼ α''} → is ≋[≼] is' → is' ≋[≼] is
+    ≋[≼]-sym = ForAllW≅-sym
 
-    ≋[≼]-trans : {is is' is'' : α ≼ α'} → is ≋[≼] is' → is' ≋[≼] is'' → is ≋[≼] is''
-    ≋[≼]-trans = ForAllW≋-trans
+    ≋[≼]-trans : {α' α'' α''' : N w'} → {is : α ≼ α'} {is' : α ≼ α''} {is'' : α ≼ α'''}
+      → is ≋[≼] is' → is' ≋[≼] is'' → is ≋[≼] is''
+    ≋[≼]-trans = ForAllW≅-trans
 
   ≼-trans-unit-left : {α : N w} {α' : N w'} (is : α ≼ α')
     → ≼-trans ≼-refl[ α ] is ≋[≼] is
-  ≼-trans-unit-left is p = let (_ , _ , i) = is p
-    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-left i)
+  ≼-trans-unit-left is = ≡-refl , λ { {v} {p} {.p} ≅-refl → let (_ , _ , i) = is p
+    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-left i) }
 
   ≼-trans-unit-right : {α : N w} {α' : N w'} (is : α ≼ α')
     → ≼-trans is ≼-refl[ α' ] ≋[≼] is
-  ≼-trans-unit-right is p = let (_ , _ , i) = is p
-    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-right i)
+  ≼-trans-unit-right is = ≡-refl , λ { {v} {p} {.p} ≅-refl → let (_ , _ , i) = is p
+    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-right i) }
 
   ≼-trans-assoc : {α : N u} {α' : N v} {α'' : N w} {α''' : N w'}
     → (is : α ≼ α') (is' : α' ≼ α'') (is'' : α'' ≼ α''')
     → ≼-trans (≼-trans is is') is'' ≋[≼] ≼-trans is (≼-trans is' is'')
-  ≼-trans-assoc is is' is'' p''' = let
+  ≼-trans-assoc is is' is'' = ≡-refl , λ { {_} {p'''} {.p'''} ≅-refl → let
     (_ , p'' , i'') = is'' p'''
     (_ , p' , i')   = is' p''
     (_ , _ , i)     = is p'
-    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-assoc i i' i'')
+    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-assoc i i' i'') }
 
   -- existence of a refinement for a neighborhood that covers a specific world
   -- i.e. α ≼-⊳ v means neighborhood α has a refinement that covers world v
@@ -131,7 +170,7 @@ module Core
   module _ {α : N w} {w' : W} where
 
     _≋[≼-⊳]_ : α ≼-⊳ w' → α ≼-⊳ w' → Set
-    (α1' , is1) ≋[≼-⊳] (α2' , is2) = Σ (α1' ≡ α2') λ α1≡α2 → ≡-subst (_{-α-} ≼_) α1≡α2 is1 ≋[≼] is2
+    (α1' , is1) ≋[≼-⊳] (α2' , is2) = α1' ≡ α2' × is1 ≋[≼] is2
 
     ≋[≼-⊳]-refl : (x : α ≼-⊳ w') → x ≋[≼-⊳] x
     ≋[≼-⊳]-refl (α , is) = ≡-refl {x = α} , ≋[≼]-refl is
@@ -239,7 +278,7 @@ module Core
       field
         -- the "refinement square" commutes point-wise
         refine-comm-cfamily : (i : w ⊆ w') (α : N w)
-          → ForAllW≋ _ (wkCFam (refine i $≼ α) (cfamily α)) (strCFam i (cfamily (refine i $α α)))
+          → ForAllW≡ _ (wkCFam (refine i $≼ α) (cfamily α)) (strCFam i (cfamily (refine i $α α)))
 
     -- Identity condition
     record Pointed : Set where
@@ -283,16 +322,27 @@ module Core
 
       field
         -- joinN preserves (setoid) equality on the second argument
-        ⨆-pres-≋ : {α : N w} {α[_] α[_]' : NFam α}
-          → ForAllW≋ α α[_] α[_]' → ⨆ α[_] ≡ ⨆ α[_]'
+        ⨆-pres-≋ : {α : N w} {α[_] : NFam α} {α[_]' : NFam α}
+          → ForAllW≅ α[_] α[_]' → ⨆ α[_] ≡ ⨆ α[_]'
 
-      -- joinN is indeed the infinitary union
+      -- joinN is the infinitary union
       -- c.f. https://en.wikipedia.org/wiki/Union_(set_theory)#Arbitrary_union
       field
         ⨆-bwd-member : {α : N w} (α[_] : NFam α) {v : W}
           → v ∈ (⨆ α[_]) → Exists∈ α (v ∈_ ∘ α[_])
         ⨆-fwd-member : {α : N w} (α[_] : NFam α) {v : W}
           → Exists∈ α (v ∈_ ∘ α[_]) → v ∈ (⨆ α[_])
+
+        -- used to show that join of the cover modality preserves setoid equality
+        ⨆-bwd-member-pres-≋ : {α : N w} {α[_] α[_]' : NFam α} {v : W}
+          → {p : v ∈ (⨆ α[_])} {p' : v ∈ (⨆ α[_]')}
+          → ForAllW≅ α[_] α[_]' → p ≅ p'
+          → Exists∈≅ (⨆-bwd-member α[_] p) (⨆-bwd-member α[_]' p')
+        -- Note: not used, speculative
+        ⨆-fwd-member-pres-≋ : {α : N w} (α[_] α[_]' : NFam α) {v : W}
+          → {p : Exists∈ α (v ∈_ ∘ α[_])} {p' : Exists∈ α (v ∈_ ∘ α[_]')}
+          → ForAllW≅ α[_] α[_]' → Exists∈≅ p p'
+          → ⨆-fwd-member α[_] p ≅ ⨆-fwd-member α[_]' p'
 
       -- join of a refined family
       ⨆'[_] : (i : w ⊆ w') {α : N w} (α[_] : NFam α) → N w'
@@ -317,3 +367,18 @@ module Core
       field
          refine-coh-joinN : (i : w ⊆ w') (α : N w) (α[_] : NFam α)
            → refine i (⨆ α[_]) ≋[≼-⊳] ⨆-refinement i α[_]
+
+  module JoinableProperties (CF : CFrame) (JF : Joinable CF) where
+
+    open CFrame CF
+    open Joinable JF
+
+    ⨆-pres-≋′ : {α α' : N w} {α[_] : NFam α} {α'[_] : NFam α'}
+          → ForAllW≅ α[_] α'[_] → ⨆ α[_] ≡ ⨆ α'[_]
+    ⨆-pres-≋′ (≡-refl , x) = ⨆-pres-≋ (≡-refl , x)
+
+    ⨆-bwd-member-pres-≋′ : {α α' : N w} {α[_] : NFam α} {α'[_] : NFam α'}
+          → {v : W} {p : v ∈ (⨆ α[_])} {p' : v ∈ (⨆ α'[_])}
+          → ForAllW≅ α[_] α'[_] → p ≅ p'
+          → Exists∈≅ (⨆-bwd-member α[_] p) (⨆-bwd-member α'[_] p')
+    ⨆-bwd-member-pres-≋′ (≡-refl , x) y = ⨆-bwd-member-pres-≋ (≡-refl , x) y
