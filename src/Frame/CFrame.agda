@@ -16,7 +16,6 @@ open import Relation.Binary.PropositionalEquality using (_≡_)
 open import Data.Product using (Σ ; ∃; ∃₂; _×_; _,_; -,_)
   renaming (proj₁ to fst; proj₂ to snd)
 
-open import Relation.Unary using () renaming (Pred to Predℓ ; _⊆_ to _⊑_)
 open import Level using (0ℓ)
 
 open import PUtil using (Σ×-≡,≡,≡→≡)
@@ -27,7 +26,7 @@ private
     w w' w'' u u' v v' : W
 
 Pred : Set → Set₁
-Pred A = Predℓ A 0ℓ
+Pred A = A → Set
 
 module Core
   -- Neighborhood "directory"
@@ -42,23 +41,51 @@ module Core
 
   -- a predicate satisfied by all elements of a neighborhood
   ForAllW : (α : N w) (P : Pred W) → Set
-  ForAllW α P = (α ∋_) ⊑ P
+  ForAllW α P = ∀ {v} → v ∈ α → P v
 
   -- ForAllW flipped
   AllForW : (P : Pred W) (α : N w) → Set
   AllForW P α = ForAllW α P
 
-  -- a predicate satisfied by all proofs witnessing membership
-  ForAll∈ : (α : N w) (P : ∀ {v} → v ∈ α → Set) → Set
-  ForAll∈ α P = ∀ {v} → (p : v ∈ α) → P p
-
-  -- a predicate is satisfied by all proofs witnessing membership of a cover
+  -- a predicate satisfied by some element of a neighborhood
   ExistsW : (α : N w) (P : Pred W) → Set
   ExistsW α P = ∃ λ v → v ∈ α × P v
 
-  -- a predicate is satisfied by all proofs witnessing membership of a cover
-  Exists∈ : (α : N w) (P : ∀ {v} → v ∈ α → Set) → Set
+  -- currying for ExistsW and ForAllW / elimination for ExistsW
+  curryW : {α : N w} {P : Pred W} {Q : Set}
+    → ((x : ExistsW α P) → Q)
+    → (ForAllW α (λ v → P v → Q))
+  curryW f p q = f (-, (p , q))
+
+  -- uncurrying for ExistsW and ForAllW
+  uncurryW : {α : N w} {P : Pred W} {Q : Set}
+    → ForAllW α (λ v → P v → Q)
+    → ((x : ExistsW α P) → Q)
+  uncurryW f (v , p , q) = f p q
+
+  -- "Path Predicate" ("paths" are membership proofs)
+  PPred : N w → Set₁
+  PPred α = {v : W} → v ∈ α → Set
+
+  -- a predicate satisfied by all paths in a neighborhood
+  ForAll∈ : (α : N w) (P : PPred α) → Set
+  ForAll∈ α P = ∀ {v} → (p : v ∈ α) → P p
+
+  -- a predicate satisfied by some path in a neighborhood
+  Exists∈ : (α : N w) (P : PPred α) → Set
   Exists∈ α P = ∃₂ λ v (p : v ∈ α) → P p
+
+  -- currying for Exists∈ and ForAll∈
+  curry∈ : {α : N w} {P : PPred α} {Q : Exists∈ α P → Set}
+    → ((x : Exists∈ α P) → Q x)
+    → ForAll∈ α (λ p → (q : P p) → Q (-, p , q))
+  curry∈ f x y = f (-, (x , y))
+
+  -- uncurrying for Exists∈ and ForAll∈
+  uncurry∈ : {α : N w} {P : PPred α} {Q : Exists∈ α P → Set}
+    → ForAll∈ α (λ {v} (p : v ∈ α) → (q : P p) → Q (v , p , q))
+    → ((x : Exists∈ α P) → Q x)
+  uncurry∈ f (v , p , q) = f p q
 
   -- refinement relation for neighborhoods
   _≼_ : N w → N w' → Set
@@ -74,26 +101,14 @@ module Core
     (v , p , i)    = is p'
     in (v , p , ⊆-trans i i')
 
-  -- extensional equality of ForAllW proofs
+  -- (legacy)
   ForAllW≡ : (α : N w) {P : Pred W} → (f : ForAllW α P) (g : ForAllW α P) → Set
   ForAllW≡  {w} α f g = ForAll∈ α λ p → f p ≡ g p
-
-  -- ForAllW≡ is an equivalence
-  module _ {α : N w} {P : Pred W}  where
-
-    ForAllW≡-refl : (f : ForAllW α P) → ForAllW≡ α f f
-    ForAllW≡-refl f = λ _p → ≡-refl
-
-    ForAllW≡-sym : {f f' : ForAllW α P} → ForAllW≡ α f f' → ForAllW≡ α f' f
-    ForAllW≡-sym f≡f' = λ p → ≡-sym (f≡f' p)
-
-    ForAllW≡-trans : {f f' f'' : ForAllW α P} → ForAllW≡ α f f' → ForAllW≡ α f' f'' → ForAllW≡ α f f''
-    ForAllW≡-trans f≡f' f'≡f'' = λ p → ≡-trans (f≡f' p) (f'≡f'' p)
 
   ForAllW≅ : {α α' : N w} {P : Pred W} → (f : ForAllW α P) (f' : ForAllW α' P) →  Set
   ForAllW≅ {w} {α} {α'} f f' = α ≡ α' × ∀ {v} {p : v ∈ α} {p' : v ∈ α'} → p ≅ p' → f p ≡ f' p'
 
-  -- ForAllW≡ is an equivalence
+  -- ForAllW≅ is an equivalence
   module _ {P : Pred W}  where
 
     ForAllW≅-refl : {α : N w} (f : ForAllW α P) → ForAllW≅ f f
@@ -107,25 +122,27 @@ module Core
     ForAllW≅-trans (≡-refl , f≅f') (α'≡α'' , f'≅f'') =  α'≡α''
       , λ x → ≡-trans (f≅f' ≅-refl) (f'≅f'' x)
 
-  Exists∈≅ : {α α' : N w} {P : ∀ {v} → v ∈ α → Set} {P' : ∀ {v} → v ∈ α' → Set}
+  Exists∈≅ : {α α' : N w} {P : PPred α} {P' : ∀ {v} → v ∈ α' → Set}
     → (x : Exists∈ α P) (y : Exists∈ α' P') → Set
   Exists∈≅ {w} {α} {α'} (v , p , q) (v' , p' , q') = v ≡ v' × p ≅ p' × q ≅ q'
 
-  Exists∈≅-refl : {α : N w} {P : ∀ {v} → v ∈ α → Set} (x : Exists∈ α P)
-    → Exists∈≅ x x
-  Exists∈≅-refl x = ≡-refl , ≅-refl , ≅-refl
+  -- Exists∈≅ is an equivalence
+  module _ {α : N w} {P : PPred α}  where
 
-  Exists∈≅-sym : {α α' : N w} {P : ∀ {v} → v ∈ α → Set} {P' : ∀ {v} → v ∈ α' → Set}
-    → {x : Exists∈ α P} {y : Exists∈ α' P'}
-    → Exists∈≅ x y → Exists∈≅ y x
-  Exists∈≅-sym (q , r , s) = ≡-sym q , ≅-sym r , ≅-sym s
+    Exists∈≅-refl : (x : Exists∈ α P) → Exists∈≅ x x
+    Exists∈≅-refl x = ≡-refl , ≅-refl , ≅-refl
 
-  Exists∈≅-trans : {α α' α'' : N w}
-    → {P : ∀ {v} → v ∈ α → Set} {P' : ∀ {v} → v ∈ α' → Set} {P'' : ∀ {v} → v ∈ α'' → Set}
-    → {x : Exists∈ α P} {y : Exists∈ α' P'} {z : Exists∈ α'' P''}
-    → Exists∈≅ x y → Exists∈≅ y z → Exists∈≅ x z
-  Exists∈≅-trans (q₁ , r₁ , s₁) (q₂ , r₂ , s₂)
-    = ≡-trans q₁ q₂ , ≅-trans r₁ r₂ , ≅-trans s₁ s₂
+    Exists∈≅-sym : {α' : N w} {P' : PPred α'}
+      → {x : Exists∈ α P} {y : Exists∈ α' P'}
+      → Exists∈≅ x y → Exists∈≅ y x
+    Exists∈≅-sym (q , r , s) = ≡-sym q , ≅-sym r , ≅-sym s
+
+    Exists∈≅-trans : {α' α'' : N w}
+      → {P' : PPred α'} {P'' : PPred α''}
+      → {x : Exists∈ α P} {y : Exists∈ α' P'} {z : Exists∈ α'' P''}
+      → Exists∈≅ x y → Exists∈≅ y z → Exists∈≅ x z
+    Exists∈≅-trans (q₁ , r₁ , s₁) (q₂ , r₂ , s₂)
+      = ≡-trans q₁ q₂ , ≅-trans r₁ r₂ , ≅-trans s₁ s₂
 
   -- extensional equality of refinement proofs
   module _ {α : N w} where
@@ -260,8 +277,8 @@ module Core
     NFam : N w → Set
     NFam α = ForAllW α N
 
-    refineNFam : {α : N w} {α' : N w'} → α ≼ α' → NFam α → NFam α'
-    refineNFam is fam x = wkForAllW N (_$α_ ∘ refine) is fam x
+    wkNFam : {α : N w} {α' : N w'} → α ≼ α' → NFam α → NFam α'
+    wkNFam is fam x = wkForAllW N (_$α_ ∘ refine) is fam x
 
   module _ (CF : CFrame) where
 
@@ -344,29 +361,33 @@ module Core
           → ForAllW≅ α[_] α[_]' → Exists∈≅ p p'
           → ⨆-fwd-member α[_] p ≅ ⨆-fwd-member α[_]' p'
 
-      -- join of a refined family
-      ⨆'[_] : (i : w ⊆ w') {α : N w} (α[_] : NFam α) → N w'
-      ⨆'[ i ] α[_] = ⨆ (refineNFam (refine i $≼ _) α[_])
+        ⨆-fwd-bwd-id : {α : N w} {α[_] : NFam α} {v : W} (x : Exists∈ α (v ∈_ ∘ α[_]))
+          → Exists∈≅ (⨆-bwd-member α[_] (⨆-fwd-member α[_] x)) x
 
       -- join of a refined family refines the joint family
-      ⨆'[_]-refines : (i : w ⊆ w')
-        → {α : N w} (α[_] : ForAllW α N)
-        → (⨆ α[_]) ≼ (⨆'[ i ] α[_])
-      ⨆'[_]-refines i α[_] {x'} p' =
-        let (α'  , α≼α') = refine i _{-α-}
-            (v' , v'∈α' , x'∈α[_]') = ⨆-bwd-member (refineNFam α≼α' α[_]) p'
+      ⨆-pres-≼ : {α : N w} {α' : N w'}
+        → (α≼α' : α ≼ α')
+        → (α[_] : ForAllW α N)
+        → (⨆ α[_]) ≼ (⨆ (wkNFam α≼α' α[_]))
+      ⨆-pres-≼ α≼α' α[_] {x'} p' =
+        let (v' , v'∈α' , x'∈α[_]') = ⨆-bwd-member (wkNFam α≼α' α[_]) p'
             (v , v∈α , v⊆v') = α≼α' v'∈α'
             (α'[v'] , α[v∈α]≼α'[v'∈α']) = refine v⊆v' (α[ v∈α ])
             (x , x∈α[v∈α] , x⊆x') = α[v∈α]≼α'[v'∈α'] x'∈α[_]'
         in x , ⨆-fwd-member α[_] (v , v∈α , x∈α[v∈α]) , x⊆x'
 
       -- canonical refinement of joinN
-      ⨆-refinement : w ⊆ w' → {α : N w} → (α[_] : NFam α) → (⨆ α[_]) ≼-⊳ w'
-      ⨆-refinement i α[_] =  ⨆'[ i ] α[_] , ⨆'[ i ]-refines α[_]
+      ⨆-⊳[_] : w ⊆ w' → {α : N w} (α[_] : NFam α) → (⨆ α[_]) ≼-⊳ w'
+      ⨆-⊳[ i ] {α} α[_] =  let (α' , α≼α') = refine i α in ⨆ (wkNFam α≼α' α[_]) , ⨆-pres-≼ α≼α' α[_]
 
       field
          refine-coh-joinN : (i : w ⊆ w') (α : N w) (α[_] : NFam α)
-           → refine i (⨆ α[_]) ≋[≼-⊳] ⨆-refinement i α[_]
+           → refine i (⨆ α[_]) ≋[≼-⊳] ⨆-⊳[ i ] α[_]
+
+         --joinN-assoc : {α : N w} {α[_] : NFam α} {α[_][_] : ForAll∈ α (NFam ∘ α[_])}
+         --  → joinN α (λ p → joinN α[ p ] (λ q → α[ p ][ q ]))
+         --    ≡ joinN (joinN α α[_]) (uncurry∈ (λ p q → α[ p ][ q ]) ∘ ⨆-bwd-member α[_])
+
 
   module JoinableProperties (CF : CFrame) (JF : Joinable CF) where
 
