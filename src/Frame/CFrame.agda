@@ -53,19 +53,23 @@ module Core
 
   -- currying for ExistsW and ForAllW / elimination for ExistsW
   curryW : {α : N w} {P : Pred W} {Q : Set}
-    → ((x : ExistsW α P) → Q)
+    → (ExistsW α P → Q)
     → (ForAllW α (λ v → P v → Q))
   curryW f p q = f (-, (p , q))
 
   -- uncurrying for ExistsW and ForAllW
   uncurryW : {α : N w} {P : Pred W} {Q : Set}
     → ForAllW α (λ v → P v → Q)
-    → ((x : ExistsW α P) → Q)
+    → (ExistsW α P → Q)
   uncurryW f (v , p , q) = f p q
 
   -- "Path Predicate" ("paths" are membership proofs)
   PPred : N w → Set₁
   PPred α = {v : W} → v ∈ α → Set
+
+  private
+    _→̇_ : {α : N w} (P Q : PPred α) → Set
+    P →̇ Q = {v : W} → (p : v ∈ _) → P p → Q p
 
   -- a predicate satisfied by all paths in a neighborhood
   ForAll∈ : (α : N w) (P : PPred α) → Set
@@ -74,6 +78,9 @@ module Core
   -- a predicate satisfied by some path in a neighborhood
   Exists∈ : (α : N w) (P : PPred α) → Set
   Exists∈ α P = ∃₂ λ v (p : v ∈ α) → P p
+
+  mapExists∈ : {α : N w} {P Q : PPred α} → P →̇ Q → Exists∈ α P → Exists∈ α Q
+  mapExists∈ f (v , p , q) = v , p , f p q
 
   -- currying for Exists∈ and ForAll∈
   curry∈ : {α : N w} {P : PPred α} {Q : Exists∈ α P → Set}
@@ -122,7 +129,7 @@ module Core
     ForAllW≅-trans (≡-refl , f≅f') (α'≡α'' , f'≅f'') =  α'≡α''
       , λ x → ≡-trans (f≅f' ≅-refl) (f'≅f'' x)
 
-  Exists∈≅ : {α α' : N w} {P : PPred α} {P' : ∀ {v} → v ∈ α' → Set}
+  Exists∈≅ : {α α' : N w} {P : PPred α} {P' : PPred α'}
     → (x : Exists∈ α P) (y : Exists∈ α' P') → Set
   Exists∈≅ {w} {α} {α'} (v , p , q) (v' , p' , q') = v ≡ v' × p ≅ p' × q ≅ q'
 
@@ -253,11 +260,30 @@ module Core
     wkForAllW : {α : N w} {α' : N w'} → α ≼ α' → ForAllW α P → ForAllW α' P
     wkForAllW is fam x = let (_ , x' , i) = is x in wkP i (fam x')
 
-  strCFam : {α : N w} (i : v ⊆ v') → ForAllW α (v' ⊆_) → ForAllW α (v ⊆_)
-  strCFam i fam x = strForAllW _⊆_ ⊆-trans i fam x
+  --
+  -- Neighborhood families and trees
+  --
 
-  wkCFam : {α : N w} {α' : N w'} → α ≼ α' → ForAllW α (w ⊆_) → ForAllW α' (w ⊆_)
-  wkCFam is fam x = wkForAllW (_ ⊆_) (flip ⊆-trans) is fam x
+  -- Family of neighborhoods
+  NFam : N w → Set
+  NFam α = ForAllW α N
+
+  -- Family of refinements
+  RFam : N w → W → Set
+  RFam α v = ForAllW α (v ⊆_)
+
+  strRFam : {α : N w} (i : v ⊆ v') → RFam α v' → RFam α v
+  strRFam i fam x = strForAllW _⊆_ ⊆-trans i fam x
+
+  wkRFam : {α : N w} {α' : N w'} → α ≼ α' → RFam α w → RFam α' w
+  wkRFam is fam x = wkForAllW (_ ⊆_) (flip ⊆-trans) is fam x
+
+  GTree[_,_] : {α : N w} (P : PPred α) (iQ : {x : W} {p : x ∈ α} → P {x} p → Set) → (α[_] : ForAll∈ α P) → Set
+  GTree[_,_] {w} {α} _ iQ α[_] = ForAll∈ α (iQ ∘ α[_])
+
+  -- Tree whose nodes are neighborhoods and leaves are P-values
+  Tree[_] : (P : Pred W) {α : N w} → (α[_] : NFam α) → Set
+  Tree[ P ] {α} α[_] = GTree[ (λ _ → N _) , AllForW P ] α[_]
 
   record CFrame : Set₁ where
 
@@ -274,9 +300,6 @@ module Core
       refine-pres-⇒≼-trans : {w w' : W} (i : w ⊆ w') (i' : w' ⊆ w'')
         → refine (⊆-trans i i') ≋[⇒≼] ⇒≼-trans (refine i) (refine i')
 
-    NFam : N w → Set
-    NFam α = ForAllW α N
-
     wkNFam : {α : N w} {α' : N w'} → α ≼ α' → NFam α → NFam α'
     wkNFam is fam x = wkForAllW N (_$α_ ∘ refine) is fam x
 
@@ -290,12 +313,12 @@ module Core
 
         -- "Covering family"
         -- Every neighbor in a neighborhood is reachable via ⊆
-        cfamily : (α : N w) → ForAllW α (w ⊆_)
+        cfamily : (α : N w) → RFam α w
 
       field
         -- the "refinement square" commutes point-wise
         refine-comm-cfamily : (i : w ⊆ w') (α : N w)
-          → ForAllW≡ _ (wkCFam (refine i $≼ α) (cfamily α)) (strCFam i (cfamily (refine i $α α)))
+          → ForAllW≡ _ (wkRFam (refine i $≼ α) (cfamily α)) (strRFam i (cfamily (refine i $α α)))
 
     -- Identity condition
     record Pointed : Set where
@@ -384,10 +407,44 @@ module Core
          refine-coh-joinN : (i : w ⊆ w') (α : N w) (α[_] : NFam α)
            → refine i (⨆ α[_]) ≋[≼-⊳] ⨆-⊳[ i ] α[_]
 
-         --joinN-assoc : {α : N w} {α[_] : NFam α} {α[_][_] : ForAll∈ α (NFam ∘ α[_])}
-         --  → joinN α (λ p → joinN α[ p ] (λ q → α[ p ][ q ]))
-         --    ≡ joinN (joinN α α[_]) (uncurry∈ (λ p q → α[ p ][ q ]) ∘ ⨆-bwd-member α[_])
+      joinFam[_] : (P : Pred W) {α : N w} (α[_] : NFam α) → Tree[ P ] α[_] → ForAllW (⨆ α[_]) P
+      joinFam[ P ] α[_] tr = uncurry∈ (λ p → tr p) ∘ ⨆-bwd-member α[_]
 
+      joinNFamᵢ : {α : N w} (α[_] : NFam α) (α[_][_] : Tree[ N ] α[_]) → NFam α
+      joinNFamᵢ α[_] α[_][_] = λ p → joinN α[ p ] (λ q → α[ p ][ q ])
+
+      joinNFamₑ : {α : N w} (α[_] : NFam α) (α[_][_] : Tree[ N ] α[_]) → NFam (⨆ α[_])
+      joinNFamₑ = joinFam[ N ]
+
+      field
+         joinN-assoc : {α : N w} {α[_] : NFam α} {α[_][_] : Tree[ N ] α[_]}
+           → joinN α (joinNFamᵢ α[_] α[_][_]) ≡ joinN (joinN α α[_]) (joinNFamₑ α[_] α[_][_])
+
+         ⨆-bwd-member-resp-assoc : {α : N w} {α[_] : NFam α} {α[_][_] : Tree[ N ] α[_]} {z : W}
+           → {z∈ji : z ∈ joinN α (joinNFamᵢ α[_] α[_][_])}
+           → {z∈je : z ∈ joinN (joinN α α[_]) (joinNFamₑ α[_] α[_][_])}
+           → z∈ji ≅ z∈je
+           → let
+             -- LHS
+             (x , x∈α , z∈⨆α[x][-]) = ⨆-bwd-member (joinNFamᵢ α[_] α[_][_]) z∈ji
+             (y , y∈α[x] , z∈α[x][y]) = ⨆-bwd-member α[ x∈α ][_] z∈⨆α[x][-]
+             -- RHS
+             (y' , y'∈⨆α[-] , z∈α[x'][y']) = ⨆-bwd-member (joinNFamₑ α[_] α[_][_]) z∈je
+             (x' , x'∈α , y'∈α[x']) = ⨆-bwd-member α[_] y'∈⨆α[-]
+             in x ≡ x' × x∈α ≅ x'∈α × y ≡ y' × y∈α[x] ≅ y'∈α[x'] × z∈α[x][y] ≅ z∈α[x'][y']
+
+         -- to replace ⨆-bwd-member-resp-assoc
+         ⨆-bwd-member-resp-assoc' : {α : N w} {α[_] : NFam α} {α[_][_] : Tree[ N ] α[_]} {z : W}
+           → {z∈ji : z ∈ joinN α (joinNFamᵢ α[_] α[_][_])}
+           → {z∈je : z ∈ joinN (joinN α α[_]) (joinNFamₑ α[_] α[_][_])}
+           → z∈ji ≅ z∈je
+           → Exists∈≅
+               (mapExists∈
+                 (λ x∈α → ⨆-bwd-member α[ x∈α ][_])
+                 (⨆-bwd-member (joinNFamᵢ α[_] α[_][_]) z∈ji))
+               (mapExists∈
+                 (λ y'∈⨆α[-] z∈α[x'][y'] → mapExists∈ (λ x'∈α → α[ x'∈α ][_]) (⨆-bwd-member α[_] y'∈⨆α[-]))
+                 (⨆-bwd-member (joinNFamₑ α[_] α[_][_]) z∈je))
 
   module JoinableProperties (CF : CFrame) (JF : Joinable CF) where
 
