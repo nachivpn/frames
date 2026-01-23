@@ -131,25 +131,25 @@ module Core
 
   Exists∈≅ : {α α' : N w} {P : PPred α} {P' : PPred α'}
     → (x : Exists∈ α P) (y : Exists∈ α' P') → Set
-  Exists∈≅ {w} {α} {α'} (v , p , q) (v' , p' , q') = v ≡ v' × p ≅ p' × q ≅ q'
+  Exists∈≅ {w} {α} {α'} (v , p , q) (v' , p' , q') = α ≡ α' × v ≡ v' × p ≅ p' × q ≅ q'
 
   -- Exists∈≅ is an equivalence
   module _ {α : N w} {P : PPred α}  where
 
     Exists∈≅-refl : (x : Exists∈ α P) → Exists∈≅ x x
-    Exists∈≅-refl x = ≡-refl , ≅-refl , ≅-refl
+    Exists∈≅-refl x = ≡-refl , ≡-refl , ≅-refl , ≅-refl
 
     Exists∈≅-sym : {α' : N w} {P' : PPred α'}
       → {x : Exists∈ α P} {y : Exists∈ α' P'}
       → Exists∈≅ x y → Exists∈≅ y x
-    Exists∈≅-sym (q , r , s) = ≡-sym q , ≅-sym r , ≅-sym s
+    Exists∈≅-sym (p , q , r , s) = ≡-sym p , ≡-sym q , ≅-sym r , ≅-sym s
 
     Exists∈≅-trans : {α' α'' : N w}
       → {P' : PPred α'} {P'' : PPred α''}
       → {x : Exists∈ α P} {y : Exists∈ α' P'} {z : Exists∈ α'' P''}
       → Exists∈≅ x y → Exists∈≅ y z → Exists∈≅ x z
-    Exists∈≅-trans (q₁ , r₁ , s₁) (q₂ , r₂ , s₂)
-      = ≡-trans q₁ q₂ , ≅-trans r₁ r₂ , ≅-trans s₁ s₂
+    Exists∈≅-trans (p₁ , q₁ , r₁ , s₁) (p₂ , q₂ , r₂ , s₂)
+      = ≡-trans p₁ p₂ , ≡-trans q₁ q₂ , ≅-trans r₁ r₂ , ≅-trans s₁ s₂
 
   -- extensional equality of refinement proofs
   module _ {α : N w} where
@@ -432,19 +432,6 @@ module Core
              (y' , y'∈⨆α[-] , z∈α[x'][y']) = ⨆-bwd-member (joinNFamₑ α[_] α[_][_]) z∈je
              (x' , x'∈α , y'∈α[x']) = ⨆-bwd-member α[_] y'∈⨆α[-]
              in x ≡ x' × x∈α ≅ x'∈α × y ≡ y' × y∈α[x] ≅ y'∈α[x'] × z∈α[x][y] ≅ z∈α[x'][y']
-
-         -- to replace ⨆-bwd-member-resp-assoc
-         ⨆-bwd-member-resp-assoc' : {α : N w} {α[_] : NFam α} {α[_][_] : Tree[ N ] α[_]} {z : W}
-           → {z∈ji : z ∈ joinN α (joinNFamᵢ α[_] α[_][_])}
-           → {z∈je : z ∈ joinN (joinN α α[_]) (joinNFamₑ α[_] α[_][_])}
-           → z∈ji ≅ z∈je
-           → Exists∈≅
-               (mapExists∈
-                 (λ x∈α → ⨆-bwd-member α[ x∈α ][_])
-                 (⨆-bwd-member (joinNFamᵢ α[_] α[_][_]) z∈ji))
-               (mapExists∈
-                 (λ y'∈⨆α[-] z∈α[x'][y'] → mapExists∈ (λ x'∈α → α[ x'∈α ][_]) (⨆-bwd-member α[_] y'∈⨆α[-]))
-                 (⨆-bwd-member (joinNFamₑ α[_] α[_][_]) z∈je))
 
   module JoinableProperties (CF : CFrame) (JF : Joinable CF) where
 
