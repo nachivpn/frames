@@ -321,7 +321,7 @@ module Core
           → ForAllW≡ _ (wkRFam (refine i $≼ α) (cfamily α)) (strRFam i (cfamily (refine i $α α)))
 
     -- Identity condition
-    record Pointed : Set where
+    record WeaklyPointed : Set where
 
       field
 
@@ -340,6 +340,38 @@ module Core
 
       pointN-pres-≼ : w ⊆ w' → pointN[ w ] ≼ pointN[ w' ]
       pointN-pres-≼ {w} {w'} i = λ x → w , pointN-fwd-member[ w ] , ⊆-trans i (pointN-bwd-reachable x)
+
+      -- canonical refinement of pointN[ w ] at w'
+      pointN≼-⊳[_] : w ⊆ w' → pointN[ w ] ≼-⊳ w'
+      pointN≼-⊳[ i ] = pointN[ _ ] , pointN-pres-≼ i
+
+      field
+        refine-coh-pointN : (i : w ⊆ w') → refine i pointN[ w ] ≋[≼-⊳] pointN≼-⊳[ i ]
+
+    record Pointed : Set where
+
+      field
+
+        -- a "pointed" neighborhood
+        pointN[_]     : ∀ w → N w
+
+        -- w is a member of pointN[ w ]
+        pointN-fwd-member[_]     : ∀ w → w ∈ pointN[ w ]
+
+        -- every neighbor in pointN is an intuitionistic future of w reachable through ⊆
+        pointN-bwd-unique : ForAllW (pointN[ w ]) (w ≡_)
+
+
+      -- singleton family of P proofs
+      singleFam[_] : (P : Pred W) (x : P w) → ForAllW pointN[ w ] P
+      singleFam[ P ] x p = ≡-subst P (pointN-bwd-unique p) x
+
+      -- every neighborhood α has a family of pointed neighborhoods
+      pointNFam[_] : (α : N w) → NFam α
+      pointNFam[ α ] {v} _v∈α = pointN[ v ]
+
+      pointN-pres-≼ : w ⊆ w' → pointN[ w ] ≼ pointN[ w' ]
+      pointN-pres-≼ {w} {w'} i = λ x → w , pointN-fwd-member[ w ] , singleFam[ w ⊆_ ] i x
 
       -- canonical refinement of pointN[ w ] at w'
       pointN≼-⊳[_] : w ⊆ w' → pointN[ w ] ≼-⊳ w'
@@ -432,6 +464,28 @@ module Core
              (y' , y'∈⨆α[-] , z∈α[x'][y']) = ⨆-bwd-member (joinNFamₑ α[_] α[_][_]) z∈je
              (x' , x'∈α , y'∈α[x']) = ⨆-bwd-member α[_] y'∈⨆α[-]
              in x ≡ x' × x∈α ≅ x'∈α × y ≡ y' × y∈α[x] ≅ y'∈α[x'] × z∈α[x][y] ≅ z∈α[x'][y']
+
+    record Monadic (PF : Pointed) (JF : Joinable) : Set₁ where
+      open Pointed PF
+      open Joinable JF
+
+      field
+        joinN-unit-left : (α : N w) → joinN pointN[ w ] (singleFam[ N ] α) ≡ α
+
+        joinN-unit-right  : (α : N w) → joinN α pointNFam[ α ] ≡ α
+
+        ⨆-bwd-member-unit-left : {α : N w} {v : W} (p : v ∈ (⨆ (singleFam[ N ] α)))
+          → Exists∈≅ {α' = α} {P = v ∈_ ∘ singleFam[ N ] α} {P' = λ _ → v ∈ (⨆ (singleFam[ N ] α))}
+          (⨆-bwd-member (singleFam[ N ] α) p) (v , (≡-subst (v ∈_) (joinN-unit-left α) p , p))
+
+      -- ⨆ { α } = α
+      ⨆-unit₁ : (α : N w) → ⨆ (singleFam[ N ] α) ≡ α
+      ⨆-unit₁ = joinN-unit-left
+
+      -- ⨆ { { v } | v ∈ α } = α
+      ⨆-unit₂ : (α : N w) → ⨆ (pointNFam[ α ]) ≡ α
+      ⨆-unit₂ = joinN-unit-right
+
 
   module JoinableProperties (CF : CFrame) (JF : Joinable CF) where
 
