@@ -232,7 +232,7 @@ record ClosedUnderUni : Set where
     ⊕-bwd-reachable : (n1 n2 : N w) → ForAllW (n1 ⊕ n2)
       λ v → v ∈ n1 ⊎ v ∈ n2
 
-record Nuclear : Set where
+record NuclearFrame : Set where
   field
     refinement   : Refinement
     reachability : Reachability
@@ -243,3 +243,9 @@ record Nuclear : Set where
   open Reachability reachability public
   open Identity identity public
   open Transitivity transitivity public
+
+record MonoidalFrame : Set where
+  field
+    refinement       : Refinement
+    multiplicativity : WeaklyClosedUnderInt
+    unitality        : NonEmpty
