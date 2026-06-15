@@ -1,6 +1,6 @@
 name: frames
 depend:
-  -- agda-2.7.0.1
-  standard-library-2.0
+  -- agda-2.8.0
+  standard-library-2.4
 include :
   src

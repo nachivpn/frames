@@ -1,7 +1,7 @@
 {-# OPTIONS --safe #-}
 open import Frame.IFrame
 
-module Frame.CFrame {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) where
+module Frame.CFrame {W : Set} {_⊑_ : W → W → Set} (IF : IFrame W _⊑_) where
 
 open IFrame IF
 
@@ -96,17 +96,17 @@ module Core
 
   -- refinement relation for neighborhoods
   _≼_ : N w → N w' → Set
-  α ≼ α' = ForAllW α' (λ v' → ∃ λ v → v ∈ α × (v ⊆ v'))
+  α ≼ α' = ForAllW α' (λ v' → ∃ λ v → v ∈ α × (v ⊑ v'))
 
   ≼-refl[_] : (α : N w) → α ≼ α
-  ≼-refl[ α ] {v} p = v , p , ⊆-refl[ v ]
+  ≼-refl[ α ] {v} p = v , p , ⊑-refl[ v ]
 
   ≼-trans : {α : N w} {α' : N w'} {α'' : N w''}
     → α ≼ α' → α' ≼ α'' → α ≼ α''
   ≼-trans is is' {v''} p'' = let
     (v' , p' , i') = is' p''
     (v , p , i)    = is p'
-    in (v , p , ⊆-trans i i')
+    in (v , p , ⊑-trans i i')
 
   -- (legacy)
   ForAllW≡ : (α : N w) {P : Pred W} → (f : ForAllW α P) (g : ForAllW α P) → Set
@@ -170,12 +170,12 @@ module Core
   ≼-trans-unit-left : {α : N w} {α' : N w'} (is : α ≼ α')
     → ≼-trans ≼-refl[ α ] is ≋[≼] is
   ≼-trans-unit-left is = ≡-refl , λ { {v} {p} {.p} ≅-refl → let (_ , _ , i) = is p
-    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-left i) }
+    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊑-trans-unit-left i) }
 
   ≼-trans-unit-right : {α : N w} {α' : N w'} (is : α ≼ α')
     → ≼-trans is ≼-refl[ α' ] ≋[≼] is
   ≼-trans-unit-right is = ≡-refl , λ { {v} {p} {.p} ≅-refl → let (_ , _ , i) = is p
-    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-unit-right i) }
+    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊑-trans-unit-right i) }
 
   ≼-trans-assoc : {α : N u} {α' : N v} {α'' : N w} {α''' : N w'}
     → (is : α ≼ α') (is' : α' ≼ α'') (is'' : α'' ≼ α''')
@@ -184,7 +184,7 @@ module Core
     (_ , p'' , i'') = is'' p'''
     (_ , p' , i')   = is' p''
     (_ , _ , i)     = is p'
-    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊆-trans-assoc i i' i'') }
+    in Σ×-≡,≡,≡→≡ (≡-refl , ≡-refl , ⊑-trans-assoc i i' i'') }
 
   -- existence of a refinement for a neighborhood that covers a specific world
   -- i.e. α ≼-⊳ v means neighborhood α has a refinement that covers world v
@@ -250,12 +250,12 @@ module Core
   ⇒≼-trans-assoc h h' h'' = λ α
     → ≡-refl , ≼-trans-assoc (h $≼ α) (h' $≼ (h $α α)) (h'' $≼ (h' $α (h $α α) ))
 
-  module _ (Pi : W → Pred W) (strPi : {w v v' : W} → v ⊆ v' → Pi v' w → Pi v w) where
+  module _ (Pi : W → Pred W) (strPi : {w v v' : W} → v ⊑ v' → Pi v' w → Pi v w) where
 
-    strForAllW : {α : N w} (i : v ⊆ v') → ForAllW α (Pi v') → ForAllW α (Pi v)
+    strForAllW : {α : N w} (i : v ⊑ v') → ForAllW α (Pi v') → ForAllW α (Pi v)
     strForAllW i fam x = strPi i (fam x)
 
-  module _ (P : Pred W) (wkP : {w w' : W} → w ⊆ w' → P w → P w') where
+  module _ (P : Pred W) (wkP : {w w' : W} → w ⊑ w' → P w → P w') where
 
     wkForAllW : {α : N w} {α' : N w'} → α ≼ α' → ForAllW α P → ForAllW α' P
     wkForAllW is fam x = let (_ , x' , i) = is x in wkP i (fam x')
@@ -270,13 +270,13 @@ module Core
 
   -- Family of refinements
   RFam : N w → W → Set
-  RFam α v = ForAllW α (v ⊆_)
+  RFam α v = ForAllW α (v ⊑_)
 
-  strRFam : {α : N w} (i : v ⊆ v') → RFam α v' → RFam α v
-  strRFam i fam x = strForAllW _⊆_ ⊆-trans i fam x
+  strRFam : {α : N w} (i : v ⊑ v') → RFam α v' → RFam α v
+  strRFam i fam x = strForAllW _⊑_ ⊑-trans i fam x
 
   wkRFam : {α : N w} {α' : N w'} → α ≼ α' → RFam α w → RFam α' w
-  wkRFam is fam x = wkForAllW (_ ⊆_) (flip ⊆-trans) is fam x
+  wkRFam is fam x = wkForAllW (_ ⊑_) (flip ⊑-trans) is fam x
 
   GTree[_,_] : {α : N w} (P : PPred α) (iQ : {x : W} {p : x ∈ α} → P {x} p → Set) → (α[_] : ForAll∈ α P) → Set
   GTree[_,_] {w} {α} _ iQ α[_] = ForAll∈ α (iQ ∘ α[_])
@@ -289,16 +289,16 @@ module Core
 
     field
 
-      -- i.e. refine : w ⊆ w' → (α : N w) → Σ (N w') λ α' → α ≼ α'
-      refine : w ⊆ w' → w ⇒≼ w'
+      -- i.e. refine : w ⊑ w' → (α : N w) → Σ (N w') λ α' → α ≼ α'
+      refine : w ⊑ w' → w ⇒≼ w'
 
       --
       -- refine is functorial in its first argument
       --
       refine-pres-⇒≼-refl :
-          refine ⊆-refl ≋[⇒≼] ⇒≼-refl[ w ]
-      refine-pres-⇒≼-trans : {w w' : W} (i : w ⊆ w') (i' : w' ⊆ w'')
-        → refine (⊆-trans i i') ≋[⇒≼] ⇒≼-trans (refine i) (refine i')
+          refine ⊑-refl ≋[⇒≼] ⇒≼-refl[ w ]
+      refine-pres-⇒≼-trans : {w w' : W} (i : w ⊑ w') (i' : w' ⊑ w'')
+        → refine (⊑-trans i i') ≋[⇒≼] ⇒≼-trans (refine i) (refine i')
 
     wkNFam : {α : N w} {α' : N w'} → α ≼ α' → NFam α → NFam α'
     wkNFam is fam x = wkForAllW N (_$α_ ∘ refine) is fam x
@@ -312,12 +312,12 @@ module Core
       field
 
         -- "Covering family"
-        -- Every neighbor in a neighborhood is reachable via ⊆
+        -- Every neighbor in a neighborhood is reachable via ⊑
         cfamily : (α : N w) → RFam α w
 
       field
         -- the "refinement square" commutes point-wise
-        refine-comm-cfamily : (i : w ⊆ w') (α : N w)
+        refine-comm-cfamily : (i : w ⊑ w') (α : N w)
           → ForAllW≡ _ (wkRFam (refine i $≼ α) (cfamily α)) (strRFam i (cfamily (refine i $α α)))
 
     -- Identity condition
@@ -331,22 +331,22 @@ module Core
         -- w is a member of pointN[ w ]
         pointN-fwd-member[_]     : ∀ w → w ∈ pointN[ w ]
 
-        -- every neighbor in pointN is an intuitionistic future of w reachable through ⊆
-        pointN-bwd-reachable : ForAllW (pointN[ w ]) (w ⊆_ )
+        -- every neighbor in pointN is an intuitionistic future of w reachable through ⊑
+        pointN-bwd-reachable : ForAllW (pointN[ w ]) (w ⊑_ )
 
         -- coherence condition on pointed neighborhoods
-        -- i.e. reaching w (as its own neighbor) via pointN-bwd-member must be through ⊆-refl
-        pointN-coh[_] : ∀ w → pointN-bwd-reachable pointN-fwd-member[ w ] ≡ ⊆-refl[ w ]
+        -- i.e. reaching w (as its own neighbor) via pointN-bwd-member must be through ⊑-refl
+        pointN-coh[_] : ∀ w → pointN-bwd-reachable pointN-fwd-member[ w ] ≡ ⊑-refl[ w ]
 
-      pointN-pres-≼ : w ⊆ w' → pointN[ w ] ≼ pointN[ w' ]
-      pointN-pres-≼ {w} {w'} i = λ x → w , pointN-fwd-member[ w ] , ⊆-trans i (pointN-bwd-reachable x)
+      pointN-pres-≼ : w ⊑ w' → pointN[ w ] ≼ pointN[ w' ]
+      pointN-pres-≼ {w} {w'} i = λ x → w , pointN-fwd-member[ w ] , ⊑-trans i (pointN-bwd-reachable x)
 
       -- canonical refinement of pointN[ w ] at w'
-      pointN≼-⊳[_] : w ⊆ w' → pointN[ w ] ≼-⊳ w'
+      pointN≼-⊳[_] : w ⊑ w' → pointN[ w ] ≼-⊳ w'
       pointN≼-⊳[ i ] = pointN[ _ ] , pointN-pres-≼ i
 
       field
-        refine-coh-pointN : (i : w ⊆ w') → refine i pointN[ w ] ≋[≼-⊳] pointN≼-⊳[ i ]
+        refine-coh-pointN : (i : w ⊑ w') → refine i pointN[ w ] ≋[≼-⊳] pointN≼-⊳[ i ]
 
     record Pointed : Set where
 
@@ -358,7 +358,7 @@ module Core
         -- w is a member of pointN[ w ]
         pointN-fwd-member[_]     : ∀ w → w ∈ pointN[ w ]
 
-        -- every neighbor in pointN is an intuitionistic future of w reachable through ⊆
+        -- every neighbor in pointN is an intuitionistic future of w reachable through ⊑
         pointN-bwd-unique : ForAllW (pointN[ w ]) (w ≡_)
 
 
@@ -370,15 +370,15 @@ module Core
       pointNFam[_] : (α : N w) → NFam α
       pointNFam[ α ] {v} _v∈α = pointN[ v ]
 
-      pointN-pres-≼ : w ⊆ w' → pointN[ w ] ≼ pointN[ w' ]
-      pointN-pres-≼ {w} {w'} i = λ x → w , pointN-fwd-member[ w ] , singleFam[ w ⊆_ ] i x
+      pointN-pres-≼ : w ⊑ w' → pointN[ w ] ≼ pointN[ w' ]
+      pointN-pres-≼ {w} {w'} i = λ x → w , pointN-fwd-member[ w ] , singleFam[ w ⊑_ ] i x
 
       -- canonical refinement of pointN[ w ] at w'
-      pointN≼-⊳[_] : w ⊆ w' → pointN[ w ] ≼-⊳ w'
+      pointN≼-⊳[_] : w ⊑ w' → pointN[ w ] ≼-⊳ w'
       pointN≼-⊳[ i ] = pointN[ _ ] , pointN-pres-≼ i
 
       field
-        refine-coh-pointN : (i : w ⊆ w') → refine i pointN[ w ] ≋[≼-⊳] pointN≼-⊳[ i ]
+        refine-coh-pointN : (i : w ⊑ w') → refine i pointN[ w ] ≋[≼-⊳] pointN≼-⊳[ i ]
 
     -- Transitivity condition
     record Joinable : Set₁ where
@@ -426,17 +426,17 @@ module Core
         → (⨆ α[_]) ≼ (⨆ (wkNFam α≼α' α[_]))
       ⨆-pres-≼ α≼α' α[_] {x'} p' =
         let (v' , v'∈α' , x'∈α[_]') = ⨆-bwd-member (wkNFam α≼α' α[_]) p'
-            (v , v∈α , v⊆v') = α≼α' v'∈α'
-            (α'[v'] , α[v∈α]≼α'[v'∈α']) = refine v⊆v' (α[ v∈α ])
-            (x , x∈α[v∈α] , x⊆x') = α[v∈α]≼α'[v'∈α'] x'∈α[_]'
-        in x , ⨆-fwd-member α[_] (v , v∈α , x∈α[v∈α]) , x⊆x'
+            (v , v∈α , v⊑v') = α≼α' v'∈α'
+            (α'[v'] , α[v∈α]≼α'[v'∈α']) = refine v⊑v' (α[ v∈α ])
+            (x , x∈α[v∈α] , x⊑x') = α[v∈α]≼α'[v'∈α'] x'∈α[_]'
+        in x , ⨆-fwd-member α[_] (v , v∈α , x∈α[v∈α]) , x⊑x'
 
       -- canonical refinement of joinN
-      ⨆-⊳[_] : w ⊆ w' → {α : N w} (α[_] : NFam α) → (⨆ α[_]) ≼-⊳ w'
+      ⨆-⊳[_] : w ⊑ w' → {α : N w} (α[_] : NFam α) → (⨆ α[_]) ≼-⊳ w'
       ⨆-⊳[ i ] {α} α[_] =  let (α' , α≼α') = refine i α in ⨆ (wkNFam α≼α' α[_]) , ⨆-pres-≼ α≼α' α[_]
 
       field
-         refine-coh-joinN : (i : w ⊆ w') (α : N w) (α[_] : NFam α)
+         refine-coh-joinN : (i : w ⊑ w') (α : N w) (α[_] : NFam α)
            → refine i (⨆ α[_]) ≋[≼-⊳] ⨆-⊳[ i ] α[_]
 
       joinFam[_] : (P : Pred W) {α : N w} (α[_] : NFam α) → Tree[ P ] α[_] → ForAllW (⨆ α[_]) P
