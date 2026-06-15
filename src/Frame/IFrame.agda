@@ -7,30 +7,30 @@ open import Relation.Binary.PropositionalEquality
   renaming (refl to ≡-refl; sym to ≡-sym; trans to ≡-trans)
 
 --
-record Preorder (W : Set) (_⊆_ : W → W → Set) : Set where
+record Preorder (W : Set) (_⊑_ : W → W → Set) : Set where
   field
-    ⊆-trans            : {w w' w'' : W} → (i : w ⊆ w') → (i' : w' ⊆ w'') → w ⊆ w''
-    ⊆-refl             : {w : W} → w ⊆ w
+    ⊑-trans            : {w w' w'' : W} → (i : w ⊑ w') → (i' : w' ⊑ w'') → w ⊑ w''
+    ⊑-refl             : {w : W} → w ⊑ w
 
-  ⊆-refl[_] : (w : W) → w ⊆ w
-  ⊆-refl[ _ ] = ⊆-refl
+  ⊑-refl[_] : (w : W) → w ⊑ w
+  ⊑-refl[ _ ] = ⊑-refl
 
 -- Intuitionistic Frame
-record IFrame (W : Set) (_⊆_ : W → W → Set) : Set where
+record IFrame (W : Set) (_⊑_ : W → W → Set) : Set where
   field
-    ⊆-trans            : {w w' w'' : W} → (i : w ⊆ w') → (i' : w' ⊆ w'') → w ⊆ w''
-    ⊆-trans-assoc      : {w w' w'' w''' : W} (i : w ⊆ w') (i' : w' ⊆ w'') (i'' : w'' ⊆ w''') → ⊆-trans (⊆-trans i i') i'' ≡ ⊆-trans i (⊆-trans i' i'')
-    ⊆-refl             : {w : W} → w ⊆ w
-    ⊆-trans-unit-left  : {w w' : W} (i : w ⊆ w') → ⊆-trans ⊆-refl i ≡ i
-    ⊆-trans-unit-right : {w w' : W} (i : w ⊆ w') → ⊆-trans i ⊆-refl ≡ i
+    ⊑-trans            : {w w' w'' : W} → (i : w ⊑ w') → (i' : w' ⊑ w'') → w ⊑ w''
+    ⊑-trans-assoc      : {w w' w'' w''' : W} (i : w ⊑ w') (i' : w' ⊑ w'') (i'' : w'' ⊑ w''') → ⊑-trans (⊑-trans i i') i'' ≡ ⊑-trans i (⊑-trans i' i'')
+    ⊑-refl             : {w : W} → w ⊑ w
+    ⊑-trans-unit-left  : {w w' : W} (i : w ⊑ w') → ⊑-trans ⊑-refl i ≡ i
+    ⊑-trans-unit-right : {w w' : W} (i : w ⊑ w') → ⊑-trans i ⊑-refl ≡ i
 
-  ⊆-refl[_] : (w : W) → w ⊆ w
-  ⊆-refl[ _ ] = ⊆-refl
+  ⊑-refl[_] : (w : W) → w ⊑ w
+  ⊑-refl[ _ ] = ⊑-refl
 
-  ⊆-trans-unit : {w w' : W} (i : w ⊆ w') → ⊆-trans ⊆-refl i ≡ ⊆-trans i ⊆-refl
-  ⊆-trans-unit i = ≡-trans (⊆-trans-unit-left i) (≡-sym (⊆-trans-unit-right i))
+  ⊑-trans-unit : {w w' : W} (i : w ⊑ w') → ⊑-trans ⊑-refl i ≡ ⊑-trans i ⊑-refl
+  ⊑-trans-unit i = ≡-trans (⊑-trans-unit-left i) (≡-sym (⊑-trans-unit-right i))
 
-module Collection {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) where
+module Collection {W : Set} {_⊑_ : W → W → Set} (IF : IFrame W _⊑_) where
 
   open IFrame IF
 
@@ -51,21 +51,21 @@ module Collection {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) wher
 
   W⋆ = List W
 
-  _⋆⊆⋆_ : W⋆ → W⋆ → Set
-  _⋆⊆⋆_ = Pointwise _⊆_
+  _⋆⊑⋆_ : W⋆ → W⋆ → Set
+  _⋆⊑⋆_ = Pointwise _⊑_
 
-  ⋆⊆⋆-refl[_] : ∀ ws → ws ⋆⊆⋆ ws
-  ⋆⊆⋆-refl[ [] ]     = []
-  ⋆⊆⋆-refl[ w ∷ ws ] = ⊆-refl {w} ∷ ⋆⊆⋆-refl[ ws ]
+  ⋆⊑⋆-refl[_] : ∀ ws → ws ⋆⊑⋆ ws
+  ⋆⊑⋆-refl[ [] ]     = []
+  ⋆⊑⋆-refl[ w ∷ ws ] = ⊑-refl {w} ∷ ⋆⊑⋆-refl[ ws ]
 
-  ⋆⊆⋆-refl : ws ⋆⊆⋆ ws
-  ⋆⊆⋆-refl = ⋆⊆⋆-refl[ _ ]
+  ⋆⊑⋆-refl : ws ⋆⊑⋆ ws
+  ⋆⊑⋆-refl = ⋆⊑⋆-refl[ _ ]
 
-  ⋆⊆⋆-trans : ws ⋆⊆⋆ ws' → ws' ⋆⊆⋆ ws'' → ws ⋆⊆⋆ ws''
-  ⋆⊆⋆-trans [] is'              = is'
-  ⋆⊆⋆-trans (i ∷ is) (i' ∷ is') = ⊆-trans i i' ∷ ⋆⊆⋆-trans is is'
+  ⋆⊑⋆-trans : ws ⋆⊑⋆ ws' → ws' ⋆⊑⋆ ws'' → ws ⋆⊑⋆ ws''
+  ⋆⊑⋆-trans [] is'              = is'
+  ⋆⊑⋆-trans (i ∷ is) (i' ∷ is') = ⊑-trans i i' ∷ ⋆⊑⋆-trans is is'
 
-  [_]⋆ : w ⊆ w' → [ w ] ⋆⊆⋆ [ w' ]
+  [_]⋆ : w ⊑ w' → [ w ] ⋆⊑⋆ [ w' ]
   [ i ]⋆ = i ∷ []
 
   ∈⋆-refl : w ∈ [ w ]
@@ -103,16 +103,16 @@ module Collection {W : Set} {_⊆_ : W → W → Set} (IF : IFrame W _⊆_) wher
   zipWithColl f []       []       = []
   zipWithColl f (a ∷ as) (b ∷ bs) = f a b ∷ zipWithColl f as bs
 
-  -- if w ⊆ w' and [ w' ⊆ x | x ∈ ws ], then [ w ⊆ x | x ∈ ws ]
-  _ᵢ∙_ : w ⊆ w' → Coll ws (w' ⊆_) → Coll ws (w ⊆_)
-  i ᵢ∙ c = mapColl (⊆-trans i) c
+  -- if w ⊑ w' and [ w' ⊑ x | x ∈ ws ], then [ w ⊑ x | x ∈ ws ]
+  _ᵢ∙_ : w ⊑ w' → Coll ws (w' ⊑_) → Coll ws (w ⊑_)
+  i ᵢ∙ c = mapColl (⊑-trans i) c
 
   wkColl : {A : W → Set}
-    → ({w w' : W} → w ⊆ w' → A w → A w')
-    → ws ⋆⊆⋆ ws' → Coll ws A → Coll ws' A
+    → ({w w' : W} → w ⊑ w' → A w → A w')
+    → ws ⋆⊑⋆ ws' → Coll ws A → Coll ws' A
   wkColl wkA []       []       = []
   wkColl wkA (i ∷ is) (x ∷ xs) = wkA i x ∷ wkColl wkA is xs
 
-  -- if [ w ⊆ x | x ∈ ws ] and ws ⊆ ws' pointwise, then [ w ⊆ x | x ∈ ws' ]
-  _∙ᵢ⋆_ : Coll ws (w ⊆_) → ws ⋆⊆⋆ ws' → Coll ws' (w ⊆_)
-  xs ∙ᵢ⋆ is = wkColl (λ i' i → ⊆-trans i i') is xs
+  -- if [ w ⊑ x | x ∈ ws ] and ws ⊑ ws' pointwise, then [ w ⊑ x | x ∈ ws' ]
+  _∙ᵢ⋆_ : Coll ws (w ⊑_) → ws ⋆⊑⋆ ws' → Coll ws' (w ⊑_)
+  xs ∙ᵢ⋆ is = wkColl (λ i' i → ⊑-trans i i') is xs
