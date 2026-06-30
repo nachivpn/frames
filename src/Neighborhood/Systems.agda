@@ -30,7 +30,7 @@ module _ (NS : NeighborhoodSystem) where
       inclusion    : Inclusion
       identity     : WeakIdentity
       transitivity : WeakTransitivity
-                   
+
     open Inclusion inclusion public
     open WeakIdentity identity public
     open WeakTransitivity transitivity public
@@ -48,15 +48,15 @@ module _ (NS : NeighborhoodSystem) where
       ; identity     = Identity.weakIdentity identity
       ; transitivity = Transitivity.weakTransitivity transitivity
       }
-      
+
     open Inclusion inclusion public
     open Identity identity public
     open Transitivity transitivity public
-    
+
   record SLModalSystem : Set where
     field
       inclusion  : Inclusion
-      
+
   record CKBoxModalSystem : Set where
     field
       intclosed : WeaklyClosedUnderInt
@@ -71,6 +71,19 @@ module _ (NS : NeighborhoodSystem) where
       nothingness : EmptySeriality
 
     open CoverSystem coverSystem public
-    
+
+  record PosLogSystem : Set₁ where
+    field
+      transitivity  : Transitivity
+
+    open Transitivity transitivity public
+
+  record LatLogSystem : Set₁ where
+    field
+      identity      : Identity
+      transitivity  : Transitivity
+
+    open Transitivity transitivity public
+
 PLLModalSystem = WeakCoverSystem
 module PLLModalSystem = WeakCoverSystem
