@@ -72,7 +72,7 @@ module _ (NS : NeighborhoodSystem) where
 
     open CoverSystem coverSystem public
 
-  record PosLogSystem : Set₁ where
+  record WeakLatLogSystem : Set₁ where
     field
       transitivity  : Transitivity
 
