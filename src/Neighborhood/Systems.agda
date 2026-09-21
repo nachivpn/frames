@@ -85,5 +85,16 @@ module _ (NS : NeighborhoodSystem) where
 
     open Transitivity transitivity public
 
+  record CS4BoxModalSystem : Set where
+
+    field
+      ckBoxModalSytem : CKBoxModalSystem
+      coidentity      : WeakCoIdentity
+      density         : WeakDensity
+
+    open CKBoxModalSystem ckBoxModalSytem public
+    open WeakCoIdentity coidentity public
+    open WeakDensity density public
+
 PLLModalSystem = WeakCoverSystem
 module PLLModalSystem = WeakCoverSystem

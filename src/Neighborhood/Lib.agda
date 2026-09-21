@@ -261,28 +261,28 @@ record CoInclusion : Set where
 
 record WeakCoIdentity : Set where
   field
-    N-prp : ∀ (n : N w) → ExistsW n (↓ w)
+    N-ref : ∀ (n : N w) → ExistsW n (↓ w)
 
 record CoIdentity : Set where
   field
-    N-prp : ∀ (n : N w) → w ∈ n
+    N-mem : ∀ (n : N w) → w ∈ n
 
   weakCoIdentity : WeakCoIdentity
-  weakCoIdentity = record { N-prp = λ n → (-, N-prp n , ⊑-refl) }
+  weakCoIdentity = record { N-ref = λ n → (-, N-mem n , ⊑-refl) }
 
 record WeakDensity : Set where
   field
     -- the neighborhood family (ever neighborhood's members has a neighborhood)
-    nFam     : ∀ (n : N w) → ForAllW n N
-    nFam-ref : {n : N w} {v : W} (p : v ∈ n) → ∣ nFam n p ∣ ⊆ (↑ v)
+    denseN     : ∀ (n : N w) → ForAllW n N
+    denseN-ref : {n : N w} {v : W} (p : v ∈ n) → ∣ denseN n p ∣ ⊆ (↑ v)
 
 record Density : Set where
   field
-    nFam     : ∀ (n : N w) → ForAllW n N
-    nFam-sub : {n : N w} {v : W} (p : v ∈ n) → ∣ nFam n p ∣ ⊆ ⟨ v ⟩
+    denseN     : ∀ (n : N w) → ForAllW n N
+    denseN-sub : {n : N w} {v : W} (p : v ∈ n) → ∣ denseN n p ∣ ⊆ ⟨ v ⟩
 
   weakDensity : WeakDensity
   weakDensity = record
-    { nFam               = nFam
-    ; nFam-ref = λ p x → ≡-subst (_ ⊑_) (nFam-sub p x) ⊑-refl
+    { denseN               = denseN
+    ; denseN-ref = λ p x → ≡-subst (_ ⊑_) (denseN-sub p x) ⊑-refl
     }

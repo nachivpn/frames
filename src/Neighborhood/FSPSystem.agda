@@ -13,13 +13,14 @@ module Neighborhood.FSPSystem
   where
 
 open import Relation.Unary using ()
-  renaming (_⊆_ to _⊆ᵖ_) public
+  renaming (_⊆_ to _⊆ᵖ_)
 open import Relation.Unary.Properties
-  renaming (⊆-refl to ⊆ᵖ-refl ; ⊆-trans to ⊆ᵖ-trans) public
-  
-variable
-  w w'  : W
-  X Y Z : W → Set
+  renaming (⊆-refl to ⊆ᵖ-refl ; ⊆-trans to ⊆ᵖ-trans)
+
+private
+  variable
+    w w'  : W
+    X Y Z : W → Set
 
 -- proof-relevant "subsets" of W
 Sub : Set₁
@@ -43,18 +44,22 @@ X ⊆ Y = X ⊆ᵖ Y
 -- Cover system for Finite Sum-Product (FSP) logic
 record FSPSystem : Set₁ where
   field
-    ⊲-mon   : X ⊆ Y → w ⊲ X → w ⊲ Y 
+    ⊲-mon   : X ⊆ Y → w ⊲ X → w ⊲ Y
     ⊲-iden  : w ∈ X → w ⊲ X
     ⊲-trans : w ⊲ X → X ⊲⋆ Y → w ⊲ Y
 
   ⊲⋆-mon : Y ⊆ Z → X ⊲⋆ Y → X ⊲⋆ Z
   ⊲⋆-mon f p x = ⊲-mon f (p x)
-  
+
   ⊲⋆-refl : X ⊲⋆ X
   ⊲⋆-refl = λ x → ⊲-iden x
 
   ⊲⋆-trans : X ⊲⋆ Y → Y ⊲⋆ Z → X ⊲⋆ Z
   ⊲⋆-trans p q = λ x → ⊲-trans (p x) q
+
+record CoherentFSPSystem (𝒮 : FSPSystem) : Set₁ where
+
+  open FSPSystem 𝒮 public
 
   field
     -- functoriality
@@ -64,11 +69,11 @@ record FSPSystem : Set₁ where
       → ⊲-mon (⊆-trans {X} {Y} {Z} f g) p ≡ ⊲-mon g (⊲-mon f p)
 
     -- naturality
-    ⊲-iden-natural : (f : X ⊆ Y) (x : w ∈ X) 
-      → ⊲-mon {X} {Y} f (⊲-iden x) ≡ ⊲-iden (f x)
-    ⊲-trans-natural : (f : Y ⊆ Z) (p : w ⊲ X) (q : X ⊲⋆ Y) 
-      → ⊲-mon f (⊲-trans p q) ≡ ⊲-trans p (⊲⋆-mon f q)
-    
+    ⊲-iden-natural : (f : X ⊆ Y) (x : w ∈ X)
+      → ⊲-iden (f x) ≡ ⊲-mon {X} {Y} f (⊲-iden x)
+    ⊲-trans-natural : (f : Y ⊆ Z) (p : w ⊲ X) (q : X ⊲⋆ Y)
+      → ⊲-trans p (⊲⋆-mon f q) ≡ ⊲-mon f (⊲-trans p q)
+
     -- monad laws
     ⊲-trans-right-unit : (p : w ⊲ X)
       → ⊲-trans p ⊲-iden ≡ p
